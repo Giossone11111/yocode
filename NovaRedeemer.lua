@@ -70,6 +70,7 @@ local setupv      = (debug and debug.setupvalue) or setupvalue
 local setStatus, flashCode, appendToBox
 local rememberPendingSubmission, clearPendingSubmission, handleRedemptionFeedback
 local clearAceCapture
+local aceListenConnection = nil
 local _lastStatusMsg = nil
 
 -- UTILITY & REDEEM LOGIC --
@@ -440,6 +441,11 @@ InterfaceScale.Name = "InterfaceScale"
 InterfaceScale.Scale = 1
 InterfaceScale.Parent = Window
 
+-- Window controls: minimize/restore and close
+local windowCollapsed = false
+local normalWindowSize = UDim2.fromOffset(372, 430)
+local collapsedWindowSize = UDim2.fromOffset(372, 78)
+
 -- 1x -> 0.9x -> ... -> 0.5x
 local scaleSteps = {1, 0.9, 0.8, 0.7, 0.6, 0.5}
 local scaleIndex = 1
@@ -508,13 +514,19 @@ BrandDot.Parent = Brand
 addCorner(BrandDot, 5)
 
 makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(214, 22), UDim2.fromOffset(69, 13), 16, COLORS.White, Enum.Font.GothamBlack)
-makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(220, 18), UDim2.fromOffset(69, 36), 10, COLORS.Dim, Enum.Font.GothamMedium)
+makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(170, 18), UDim2.fromOffset(69, 36), 10, COLORS.Dim, Enum.Font.GothamMedium)
+
+local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(30, 28), UDim2.new(1, -112, 0, 21), 18)
+MinimizeButton.ZIndex = 8
+local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(30, 28), UDim2.new(1, -76, 0, 21), 18)
+CloseButton.ZIndex = 8
+CloseButton.TextColor3 = COLORS.Red
 
 -- MAIN ENABLE SWITCH
 local AutoWriteButton = Instance.new("TextButton")
 AutoWriteButton.Name = "AutoWrite"
 AutoWriteButton.Size = UDim2.fromOffset(54, 28)
-AutoWriteButton.Position = UDim2.new(1, -70, 0, 21)
+AutoWriteButton.Position = UDim2.new(1, -148, 0, 21)
 AutoWriteButton.BackgroundColor3 = COLORS.Control
 AutoWriteButton.BorderSizePixel = 0
 AutoWriteButton.AutoButtonColor = false
@@ -928,8 +940,32 @@ FooterLine.BackgroundTransparency = 0.35
 FooterLine.BorderSizePixel = 0
 FooterLine.Parent = Window
 
-makeLabel(Window, "Footer", "NOVA • READY", UDim2.fromOffset(190, 18), UDim2.new(0, 16, 1, -27), 8, COLORS.Dim, Enum.Font.GothamBold)
+local Footer = makeLabel(Window, "Footer", "NOVA • READY", UDim2.fromOffset(190, 18), UDim2.new(0, 16, 1, -27), 8, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Window, "Version", "v2 UI", UDim2.fromOffset(60, 18), UDim2.new(1, -76, 1, -27), 8, COLORS.Dim, Enum.Font.GothamBold).TextXAlignment = Enum.TextXAlignment.Right
+
+local CollapsibleItems = { Content, Footer }
+local function setWindowCollapsed(collapsed)
+    windowCollapsed = collapsed
+    for _, item in ipairs(CollapsibleItems) do
+        if item then item.Visible = not collapsed end
+    end
+    Window.Size = collapsed and collapsedWindowSize or normalWindowSize
+    MinimizeButton.Text = collapsed and "+" or "−"
+    updateInterfaceScale()
+end
+MinimizeButton.Activated:Connect(function()
+    setWindowCollapsed(not windowCollapsed)
+end)
+CloseButton.Activated:Connect(function()
+    pcall(function()
+        if aceListenConnection then aceListenConnection:Disconnect(); aceListenConnection = nil end
+        if viewportConnection then viewportConnection:Disconnect(); viewportConnection = nil end
+        if getgenv and getgenv().ACECodeSniperNotifyConnection then
+            getgenv().ACECodeSniperNotifyConnection = nil
+        end
+    end)
+    GUI:Destroy()
+end)
 
 -- Keep the first screen focused on the sniping controls.
 activatePage(SnipePage)
@@ -945,10 +981,13 @@ activatePage(SnipePage)
     Header.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
             and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        if input.Position.X >= AutoWriteButton.AbsolutePosition.X - 8
-            and input.Position.X <= AutoWriteButton.AbsolutePosition.X + AutoWriteButton.AbsoluteSize.X + 8
-            and input.Position.Y >= AutoWriteButton.AbsolutePosition.Y - 8
-            and input.Position.Y <= AutoWriteButton.AbsolutePosition.Y + AutoWriteButton.AbsoluteSize.Y + 8 then
+        local function inside(control)
+            return input.Position.X >= control.AbsolutePosition.X - 8
+                and input.Position.X <= control.AbsolutePosition.X + control.AbsoluteSize.X + 8
+                and input.Position.Y >= control.AbsolutePosition.Y - 8
+                and input.Position.Y <= control.AbsolutePosition.Y + control.AbsoluteSize.Y + 8
+        end
+        if inside(AutoWriteButton) or inside(MinimizeButton) or inside(CloseButton) then
             return
         end
 
@@ -1001,7 +1040,7 @@ function setStatus(msg, col)
     if msg == _lastStatusMsg then return end
     _lastStatusMsg = msg
     col = col or COLORS.Dim
-    local line = '<font color="' .. col3ToRich(col) .. '">' .. tostring(msg) .. "</font>"
+    local line = '<font color="' .. CONSOLE_COLORS.Cyan .. '">(NOVA)</font> <font color="' .. col3ToRich(col) .. '">' .. tostring(msg) .. "</font>"
     if ConsoleOutput.Text == "" then ConsoleOutput.Text = line
     else ConsoleOutput.Text = ConsoleOutput.Text .. "\n\n" .. line end
     scrollConsoleToBottom()
@@ -1009,7 +1048,7 @@ end
 
 function flashCode(code, col)
     if not code or code == "" or code == "—" then return end
-    setStatus("[code] -> " .. tostring(code), col or COLORS.White)
+    setStatus(tostring(code), col or COLORS.White)
 end
 
 local function resetPasteCounter() _capturedParts = {} end
@@ -1052,7 +1091,7 @@ function setStatus(msg, col)
     if msg == _lastStatusMsg then return end
     _lastStatusMsg = msg
     col = col or COLORS.Dim
-    local line = '<font color="' .. col3ToRich(col) .. '">' .. tostring(msg) .. "</font>"
+    local line = '<font color="' .. CONSOLE_COLORS.Cyan .. '">(NOVA)</font> <font color="' .. col3ToRich(col) .. '">' .. tostring(msg) .. "</font>"
     if ConsoleOutput.Text == "" then ConsoleOutput.Text = line
     else ConsoleOutput.Text = ConsoleOutput.Text .. "\n\n" .. line end
     scrollConsoleToBottom()
@@ -1060,7 +1099,7 @@ end
 
 function flashCode(code, col)
     if not code or code == "" or code == "—" then return end
-    setStatus("[code] -> " .. tostring(code), col or COLORS.White)
+    setStatus(tostring(code), col or COLORS.White)
 end
 
 local function resetPasteCounter() _capturedParts = {} end
@@ -1283,7 +1322,9 @@ local aceCollectBuffer = {}
 local function onAceAnnouncement(...)
     local text = aceStripRich(tostring((...) or ""))
     text = text:match("^%s*(.-)%s*$") or ""
-    if text == "" or text:find("%s") then return end
+    if text == "" then return end
+    setStatus(text, COLORS.White)
+    if text:find("%s") then return end
     
     for _, word in ipairs(aceTokenize(text)) do
         aceCollectBuffer[#aceCollectBuffer + 1] = word
@@ -1304,7 +1345,6 @@ local function onAceAnnouncement(...)
 end
 
 local aceNotifyRemote = resolveNotifyRemote()
-local aceListenConnection
 if aceNotifyRemote then
     if getgenv then
         local previous = getgenv().ACECodeSniperNotifyConnection
