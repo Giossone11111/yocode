@@ -399,6 +399,8 @@ local function makeButton(parent, name, text, size, position, textSize)
     button.TextColor3 = COLORS.Text
     button.Font = Enum.Font.GothamBold
     button.Parent = parent
+    button.Active = true
+    button.ZIndex = math.max(button.ZIndex, 20)
     addCorner(button, 10)
     addStroke(button, COLORS.Border, 1, 0.15)
     return button
@@ -511,27 +513,31 @@ BrandDot.Position = UDim2.new(0.5, -5, 0.5, -5)
 BrandDot.BackgroundColor3 = COLORS.Accent2
 BrandDot.BorderSizePixel = 0
 BrandDot.Parent = Brand
+BrandDot.Active = false
 addCorner(BrandDot, 5)
 
-makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(214, 22), UDim2.fromOffset(69, 13), 16, COLORS.White, Enum.Font.GothamBlack)
-makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(170, 18), UDim2.fromOffset(69, 36), 10, COLORS.Dim, Enum.Font.GothamMedium)
+makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(150, 22), UDim2.fromOffset(69, 13), 16, COLORS.White, Enum.Font.GothamBlack)
+makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(145, 18), UDim2.fromOffset(69, 36), 10, COLORS.Dim, Enum.Font.GothamMedium)
 
-local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(30, 28), UDim2.new(1, -112, 0, 21), 18)
-MinimizeButton.ZIndex = 8
-local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(30, 28), UDim2.new(1, -76, 0, 21), 18)
-CloseButton.ZIndex = 8
+local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(32, 30), UDim2.new(1, -114, 0, 20), 18)
+MinimizeButton.ZIndex = 30
+MinimizeButton.Active = true
+local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(32, 30), UDim2.new(1, -78, 0, 20), 18)
+CloseButton.ZIndex = 30
+CloseButton.Active = true
 CloseButton.TextColor3 = COLORS.Red
 
 -- MAIN ENABLE SWITCH
 local AutoWriteButton = Instance.new("TextButton")
 AutoWriteButton.Name = "AutoWrite"
 AutoWriteButton.Size = UDim2.fromOffset(54, 28)
-AutoWriteButton.Position = UDim2.new(1, -148, 0, 21)
+AutoWriteButton.Position = UDim2.new(1, -184, 0, 21)
 AutoWriteButton.BackgroundColor3 = COLORS.Control
 AutoWriteButton.BorderSizePixel = 0
 AutoWriteButton.AutoButtonColor = false
 AutoWriteButton.Text = ""
-AutoWriteButton.ZIndex = 7
+AutoWriteButton.ZIndex = 25
+AutoWriteButton.Active = true
 AutoWriteButton.Parent = Header
 addCorner(AutoWriteButton, 14)
 local AutoWriteStroke = addStroke(AutoWriteButton, COLORS.Border, 1, 0.05)
@@ -989,6 +995,12 @@ activatePage(SnipePage)
         end
         if inside(AutoWriteButton) or inside(MinimizeButton) or inside(CloseButton) then
             return
+        end
+        -- Never start dragging from any clickable button/control in the header.
+        for _, child in ipairs(Header:GetChildren()) do
+            if child:IsA("GuiButton") and inside(child) then
+                return
+            end
         end
 
         dragging = true
