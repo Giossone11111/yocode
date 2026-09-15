@@ -16,7 +16,6 @@ local savedConfig = {
     codeSniper = true,
     autoSubmit = true,
     submitAfter = 3,
-    retypeInvalid = false,
 }
 pcall(function()
     if type(isfile) == "function" and type(readfile) == "function"
@@ -26,7 +25,6 @@ pcall(function()
             if type(decoded.codeSniper) == "boolean" then savedConfig.codeSniper = decoded.codeSniper end
             if type(decoded.autoSubmit) == "boolean" then savedConfig.autoSubmit = decoded.autoSubmit end
             if type(decoded.submitAfter) == "number" then savedConfig.submitAfter = math.max(1, math.floor(decoded.submitAfter)) end
-            if type(decoded.retypeInvalid) == "boolean" then savedConfig.retypeInvalid = decoded.retypeInvalid end
         end
     end
 end)
@@ -38,7 +36,6 @@ local function saveConfig()
             codeSniper = savedConfig.codeSniper,
             autoSubmit = savedConfig.autoSubmit,
             submitAfter = savedConfig.submitAfter,
-            retypeInvalid = savedConfig.retypeInvalid,
         }))
     end)
 end
@@ -55,7 +52,6 @@ local _lastWatchedBox       = nil
 local _boxTextConn          = nil
 local _boxAncestryConn      = nil
 local _boxVisibilityConns   = {}
-local _retypeInvalid        = savedConfig.retypeInvalid
 local _lastNonBlankBoxText  = ""
 local _pendingRejectedText  = nil
 local _pendingRejectedBox   = nil
@@ -951,7 +947,7 @@ end)
 
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = (key == "Auto submit") and 4 or 5
+    row.LayoutOrder = (key == "Auto submit") and 5 or 6
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -986,7 +982,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 6
+Delay.LayoutOrder = 4
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
