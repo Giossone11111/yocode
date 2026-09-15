@@ -51,6 +51,8 @@ local _lastBox              = nil
 local _autoAccept           = savedConfig.autoSubmit
 local _submitAfter          = savedConfig.submitAfter
 local _capturedParts        = {}
+local _capturedMessages      = {}
+local _currentBatchMessages  = {}
 local _lastWatchedBox       = nil
 local _boxTextConn          = nil
 local _boxAncestryConn      = nil
@@ -69,6 +71,7 @@ local getconns    = getconnections or (debug and debug.getconnections)
 local setupv      = (debug and debug.setupvalue) or setupvalue
 
 local setStatus, flashCode, appendToBox
+local updateMessageTracker, addCapturedMessage, clearCapturedMessages
 local rememberPendingSubmission, clearPendingSubmission, handleRedemptionFeedback
 local clearAceCapture
 local aceListenConnection = nil
@@ -884,9 +887,123 @@ local function toggleAutoWrite()
 end
 AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
+-- MESSAGE TRACKER
+local MessageCard = makeSection(116)
+MessageCard.LayoutOrder = 3
+
+local MsgHeader = Instance.new("Frame")
+MsgHeader.Size = UDim2.new(1, -20, 0, 28)
+MsgHeader.Position = UDim2.fromOffset(10, 7)
+MsgHeader.BackgroundTransparency = 1
+MsgHeader.Parent = MessageCard
+
+local MsgTitle = makeLabel(MsgHeader, "Title", "MSG", UDim2.fromOffset(70, 20), UDim2.fromOffset(0, 0), 10, COLORS.White, Enum.Font.GothamBold)
+
+local MsgCount = makeLabel(MsgHeader, "Count", "0/" .. tostring(_submitAfter), UDim2.fromOffset(55, 20), UDim2.fromOffset(55, 0), 10, COLORS.Accent2, Enum.Font.GothamBlack)
+MsgCount.TextXAlignment = Enum.TextXAlignment.Left
+
+local MessageClear = makeButton(MsgHeader, "ClearMessages", "CLEAR", UDim2.fromOffset(52, 23), UDim2.new(1, -52, 0, -1), 7)
+MessageClear.BackgroundColor3 = COLORS.Control
+MessageClear.TextColor3 = COLORS.Dim
+
+local MessagesTitle = makeLabel(MessageCard, "MessagesTitle", "MESSAGES", UDim2.fromOffset(100, 15), UDim2.fromOffset(10, 34), 7, COLORS.Dim, Enum.Font.GothamBold)
+
+local MessagesScroll = Instance.new("ScrollingFrame")
+MessagesScroll.Name = "MessagesScroll"
+MessagesScroll.Size = UDim2.new(1, -20, 0, 66)
+MessagesScroll.Position = UDim2.fromOffset(10, 48)
+MessagesScroll.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
+MessagesScroll.BorderSizePixel = 0
+MessagesScroll.ClipsDescendants = true
+MessagesScroll.Active = true
+MessagesScroll.ScrollingEnabled = true
+MessagesScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+MessagesScroll.ScrollBarThickness = 2
+MessagesScroll.ScrollBarImageColor3 = COLORS.Dim
+MessagesScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+MessagesScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+MessagesScroll.Parent = MessageCard
+addCorner(MessagesScroll, 9)
+addStroke(MessagesScroll, COLORS.Border, 1, 0.3)
+
+local MessagesList = Instance.new("Frame")
+MessagesList.Name = "MessagesList"
+MessagesList.Size = UDim2.new(1, -12, 0, 1)
+MessagesList.Position = UDim2.fromOffset(6, 5)
+MessagesList.BackgroundTransparency = 1
+MessagesList.Parent = MessagesScroll
+
+local MessagesLayout = Instance.new("UIListLayout")
+MessagesLayout.Padding = UDim.new(0, 4)
+MessagesLayout.SortOrder = Enum.SortOrder.LayoutOrder
+MessagesLayout.Parent = MessagesList
+
+local function escapeRichText(value)
+    value = tostring(value or "")
+    return value:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+end
+
+local function redrawMessages()
+    for _, child in ipairs(MessagesList:GetChildren()) do
+        if child:IsA("TextLabel") then child:Destroy() end
+    end
+
+    for i, msg in ipairs(_capturedMessages) do
+        local line = Instance.new("TextLabel")
+        line.Name = "Message_" .. tostring(i)
+        line.Size = UDim2.new(1, -2, 0, 18)
+        line.BackgroundTransparency = 1
+        line.Text = '<font color="' .. CONSOLE_COLORS.Cyan .. '">•</font> <font color="' .. CONSOLE_COLORS.Text .. '">' .. escapeRichText(msg) .. '</font>'
+        line.RichText = true
+        line.TextSize = 8
+        line.Font = Enum.Font.Code
+        line.TextXAlignment = Enum.TextXAlignment.Left
+        line.TextYAlignment = Enum.TextYAlignment.Center
+        line.TextTruncate = Enum.TextTruncate.AtEnd
+        line.LayoutOrder = i
+        line.Parent = MessagesList
+    end
+
+    MsgCount.Text = tostring(#_currentBatchMessages) .. "/" .. tostring(_submitAfter)
+    MsgCount.TextColor3 = (#_currentBatchMessages >= _submitAfter) and COLORS.Green or COLORS.Accent2
+    MessagesScroll.CanvasPosition = Vector2.new(0, math.max(0, MessagesScroll.AbsoluteCanvasSize.Y - MessagesScroll.AbsoluteWindowSize.Y))
+end
+
+updateMessageTracker = function()
+    redrawMessages()
+end
+
+addCapturedMessage = function(message)
+    if not message or tostring(message) == "" then return end
+    local value = tostring(message)
+    _capturedMessages[#_capturedMessages + 1] = value
+    _currentBatchMessages[#_currentBatchMessages + 1] = value
+    redrawMessages()
+end
+
+clearCapturedMessages = function()
+    -- Remove only the messages belonging to the current, not-yet-submitted code.
+    local removeCount = #_currentBatchMessages
+    for _ = 1, removeCount do
+        if #_capturedMessages > 0 then
+            table.remove(_capturedMessages, #_capturedMessages)
+        end
+    end
+    _currentBatchMessages = {}
+    _capturedParts = {}
+    clearPendingSubmission()
+    redrawMessages()
+    setStatus("Capture cleared", COLORS.Dim)
+end
+
+MessageClear.Activated:Connect(function()
+    clearCapturedMessages()
+    novaNotify("MESSAGES CLEARED", "current capture discarded", COLORS.Amber)
+end)
+
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = (key == "Auto submit") and 3 or 4
+    row.LayoutOrder = (key == "Auto submit") and 4 or 5
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -921,7 +1038,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 5
+Delay.LayoutOrder = 6
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -943,6 +1060,7 @@ Minus.Activated:Connect(function()
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
     clearAceCapture()
+    clearCapturedMessages()
     saveConfig()
 end)
 Plus.Activated:Connect(function()
@@ -954,7 +1072,7 @@ Plus.Activated:Connect(function()
 end)
 
 local ScaleCard = makeSection(62)
-ScaleCard.LayoutOrder = 6
+ScaleCard.LayoutOrder = 7
 makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -994,7 +1112,7 @@ end)
 refreshScaleText()
 
 local Tip = makeSection(58)
-Tip.LayoutOrder = 7
+Tip.LayoutOrder = 8
 makeLabel(Tip, "Title", "NOVA TIP", UDim2.fromOffset(100, 17), UDim2.fromOffset(12, 7), 8, COLORS.Accent2, Enum.Font.GothamBold)
 makeLabel(Tip, "Text", "Scroll this panel on mobile to reach every control.", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 25), 8, COLORS.Text, Enum.Font.GothamMedium)
 
@@ -1253,6 +1371,16 @@ handleRedemptionFeedback = function(text, feedbackObject)
     if restored then
         setStatus("Invalid - repasted: " .. previousText, COLORS.Text)
         flashCode(previousText, COLORS.Red)
+        local removeCount = #_currentBatchMessages
+        for _ = 1, removeCount do
+            if #_capturedMessages > 0 then
+                table.remove(_capturedMessages, #_capturedMessages)
+            end
+        end
+        _currentBatchMessages = {}
+        _capturedParts = {}
+        redrawMessages()
+        novaNotify("INVALID CODE", "old capture cleared", COLORS.Red)
     end
 end
 
@@ -1264,6 +1392,7 @@ function appendToBox(text)
     end
     local box = aceCodeBox()
     _capturedParts[#_capturedParts + 1] = text
+    addCapturedMessage(text)
     local combinedCode = table.concat(_capturedParts)
     local capturedCount = #_capturedParts
 
@@ -1296,6 +1425,8 @@ function appendToBox(text)
             if ok then
                 setStatus("Redeemed: " .. combinedCode, COLORS.Green)
                 novaNotify("CODE REDEEMED!", combinedCode, COLORS.Green)
+                _currentBatchMessages = {}
+                redrawMessages()
             else
                 local restored = restoreRejectedText(box, combinedCode)
                 clearPendingSubmission()
