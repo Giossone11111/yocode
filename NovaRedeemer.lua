@@ -517,37 +517,8 @@ addCorner(BrandDot, 4)
 makeLabel(Header, "Title", "NOVA", UDim2.fromOffset(100, 18), UDim2.fromOffset(54, 7), 14, COLORS.White, Enum.Font.GothamBlack).ZIndex = 6
 makeLabel(Header, "Subtitle", "REDEEMER  •  FAST", UDim2.fromOffset(125, 15), UDim2.fromOffset(54, 26), 8, COLORS.Dim, Enum.Font.GothamBold).ZIndex = 6
 
--- Main on/off switch is deliberately separated from the window buttons.
-local AutoWriteButton = Instance.new("TextButton")
-AutoWriteButton.Name = "AutoWrite"
-AutoWriteButton.Size = UDim2.fromOffset(44, 24)
-AutoWriteButton.Position = UDim2.new(1, -148, 0, 15)
-AutoWriteButton.BackgroundColor3 = COLORS.Control
-AutoWriteButton.BorderSizePixel = 0
-AutoWriteButton.AutoButtonColor = false
-AutoWriteButton.Text = ""
-AutoWriteButton.ZIndex = 30
-AutoWriteButton.Active = true
-AutoWriteButton.Parent = Header
-addCorner(AutoWriteButton, 12)
-local AutoWriteStroke = addStroke(AutoWriteButton, COLORS.Border, 1, 0.05)
-
-local AutoWriteKnob = Instance.new("Frame")
-AutoWriteKnob.Size = UDim2.fromOffset(18, 18)
-AutoWriteKnob.Position = UDim2.new(0, 3, 0.5, -9)
-AutoWriteKnob.BackgroundColor3 = COLORS.White
-AutoWriteKnob.BorderSizePixel = 0
-AutoWriteKnob.ZIndex = 31
-AutoWriteKnob.Parent = AutoWriteButton
-addCorner(AutoWriteKnob, 9)
-
-local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(30, 30), UDim2.new(1, -98, 0, 12), 17)
-MinimizeButton.ZIndex = 40
-local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(30, 30), UDim2.new(1, -58, 0, 12), 17)
-CloseButton.ZIndex = 40
-CloseButton.TextColor3 = COLORS.Red
-
 local Console, ConsoleOutput, updateConsoleCanvas
+local autoWriteEnabled = _enabled
 local featureStates = {}
 local CONSOLE_COLORS = {
     Dim = "rgb(108,116,135)",
@@ -576,36 +547,6 @@ local function appendConsoleStatus(name, activated)
     if ConsoleOutput.Text == "" then ConsoleOutput.Text = line else ConsoleOutput.Text = ConsoleOutput.Text .. "\n" .. line end
     scrollConsoleToBottom()
 end
-
-local autoWriteEnabled = _enabled
-local function refreshMainToggle()
-    AutoWriteButton.BackgroundColor3 = autoWriteEnabled and COLORS.Accent or COLORS.Control
-    AutoWriteStroke.Color = autoWriteEnabled and COLORS.Accent2 or COLORS.Border
-    AutoWriteKnob.BackgroundColor3 = autoWriteEnabled and COLORS.Window or COLORS.White
-    AutoWriteKnob.Position = autoWriteEnabled and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-end
-refreshMainToggle()
-
-local lastToggleTime = 0
-local function toggleAutoWrite()
-    local now = os.clock()
-    if now - lastToggleTime < 0.12 then return end
-    lastToggleTime = now
-    autoWriteEnabled = not autoWriteEnabled
-    _enabled = autoWriteEnabled
-    if not autoWriteEnabled and clearAceCapture then clearAceCapture() end
-    savedConfig.codeSniper = autoWriteEnabled
-    saveConfig()
-    _lastStatusMsg = nil
-    refreshMainToggle()
-    if ConsoleOutput then
-        ConsoleOutput.Text = autoWriteEnabled
-            and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
-            or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
-        scrollConsoleToBottom()
-    end
-end
-AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
 -- TABS
 local Tabs = Instance.new("Frame")
@@ -669,15 +610,9 @@ ConsoleTitle.ZIndex = 3
 local ConsoleHint = makeLabel(ConsoleFrame, "Hint", "events • codes • status", UDim2.fromOffset(160, 14), UDim2.fromOffset(12, 25), 7, COLORS.Dim, Enum.Font.GothamMedium)
 ConsoleHint.ZIndex = 3
 
-local LiveChip = makeButton(ConsoleFrame, "Live", "● LIVE", UDim2.fromOffset(62, 24), UDim2.new(1, -74, 0, 9), 8)
-LiveChip.TextColor3 = COLORS.Green
-LiveChip.BackgroundColor3 = Color3.fromRGB(16, 37, 27)
-local liveStroke = LiveChip:FindFirstChildOfClass("UIStroke")
-if liveStroke then liveStroke.Color = COLORS.Green end
-
 Console = Instance.new("ScrollingFrame")
 Console.Name = "Console"
-Console.Size = UDim2.new(1, -20, 1, -55)
+Console.Size = UDim2.new(1, -20, 1, -88)
 Console.Position = UDim2.fromOffset(10, 47)
 Console.BackgroundColor3 = Color3.fromRGB(7, 8, 11)
 Console.BorderSizePixel = 0
@@ -713,7 +648,15 @@ ConsoleOutput.TextWrapped = true
 ConsoleOutput.ZIndex = 4
 ConsoleOutput.Parent = Console
 
-local ClearConsole = makeButton(ConsoleFrame, "ClearConsole", "CLEAR", UDim2.fromOffset(54, 22), UDim2.new(1, -66, 0, 8), 7)
+local ConsoleFooter = Instance.new("Frame")
+ConsoleFooter.Name = "ConsoleFooter"
+ConsoleFooter.Size = UDim2.new(1, -20, 0, 25)
+ConsoleFooter.Position = UDim2.new(0, 10, 1, -34)
+ConsoleFooter.BackgroundTransparency = 1
+ConsoleFooter.Parent = ConsoleFrame
+
+local ConsoleFooterLabel = makeLabel(ConsoleFooter, "Hint", "LIVE LOG", UDim2.fromOffset(100, 18), UDim2.fromOffset(2, 4), 7, COLORS.Dim, Enum.Font.GothamBold)
+local ClearConsole = makeButton(ConsoleFooter, "ClearConsole", "CLEAR", UDim2.fromOffset(58, 23), UDim2.new(1, -58, 0, 0), 7)
 ClearConsole.Activated:Connect(function()
     ConsoleOutput.Text = autoWriteEnabled
         and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
@@ -775,21 +718,61 @@ end
 local Hero = makeSection(64)
 makeLabel(Hero, "Eyebrow", "SNIPE ENGINE", UDim2.fromOffset(140, 15), UDim2.fromOffset(12, 8), 8, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Hero, "Title", "Capture  →  Assemble  →  Submit", UDim2.fromOffset(220, 20), UDim2.fromOffset(12, 25), 10, COLORS.White, Enum.Font.GothamBold)
-local StatePill = makeButton(Hero, "State", autoWriteEnabled and "READY" or "PAUSED", UDim2.fromOffset(64, 25), UDim2.new(1, -76, 0, 20), 8)
-local stateStroke = StatePill:FindFirstChildOfClass("UIStroke")
+-- Main script control lives inside SNIPE, so the header stays clean.
 
-local function refreshStatePill()
-    StatePill.Text = autoWriteEnabled and "READY" or "PAUSED"
-    StatePill.TextColor3 = autoWriteEnabled and COLORS.Green or COLORS.Dim
-    StatePill.BackgroundColor3 = autoWriteEnabled and Color3.fromRGB(16, 37, 27) or COLORS.Control
-    if stateStroke then stateStroke.Color = autoWriteEnabled and COLORS.Green or COLORS.Border end
+local EnableCard = makeSection(58)
+EnableCard.LayoutOrder = 2
+makeLabel(EnableCard, "Title", "SNIPE STATUS", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
+makeLabel(EnableCard, "Hint", "enable / pause scanner", UDim2.fromOffset(145, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
+
+local AutoWriteButton = Instance.new("TextButton")
+AutoWriteButton.Name = "EnableSnipe"
+AutoWriteButton.Size = UDim2.fromOffset(82, 30)
+AutoWriteButton.Position = UDim2.new(1, -94, 0.5, -15)
+AutoWriteButton.BackgroundColor3 = COLORS.Control
+AutoWriteButton.BorderSizePixel = 0
+AutoWriteButton.AutoButtonColor = false
+AutoWriteButton.Text = autoWriteEnabled and "ENABLED" or "OFF"
+AutoWriteButton.TextSize = 8
+AutoWriteButton.Font = Enum.Font.GothamBold
+AutoWriteButton.TextColor3 = autoWriteEnabled and COLORS.White or COLORS.Dim
+AutoWriteButton.ZIndex = 20
+AutoWriteButton.Parent = EnableCard
+addCorner(AutoWriteButton, 10)
+local AutoWriteStroke = addStroke(AutoWriteButton, autoWriteEnabled and COLORS.Accent2 or COLORS.Border, 1, 0.05)
+
+local function refreshMainToggle()
+    AutoWriteButton.Text = autoWriteEnabled and "ENABLED" or "OFF"
+    AutoWriteButton.BackgroundColor3 = autoWriteEnabled and COLORS.Accent or COLORS.Control
+    AutoWriteButton.TextColor3 = autoWriteEnabled and COLORS.White or COLORS.Dim
+    AutoWriteStroke.Color = autoWriteEnabled and COLORS.Accent2 or COLORS.Border
 end
-refreshStatePill()
-AutoWriteButton.Activated:Connect(refreshStatePill)
+refreshMainToggle()
+
+local lastToggleTime = 0
+local function toggleAutoWrite()
+    local now = os.clock()
+    if now - lastToggleTime < 0.12 then return end
+    lastToggleTime = now
+    autoWriteEnabled = not autoWriteEnabled
+    _enabled = autoWriteEnabled
+    if not autoWriteEnabled and clearAceCapture then clearAceCapture() end
+    savedConfig.codeSniper = autoWriteEnabled
+    saveConfig()
+    _lastStatusMsg = nil
+    refreshMainToggle()
+    if ConsoleOutput then
+        ConsoleOutput.Text = autoWriteEnabled
+            and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
+            or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
+        scrollConsoleToBottom()
+    end
+end
+AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = 2
+    row.LayoutOrder = (key == "Auto submit") and 3 or 4
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -824,7 +807,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 3
+Delay.LayoutOrder = 5
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -857,7 +840,7 @@ Plus.Activated:Connect(function()
 end)
 
 local ScaleCard = makeSection(62)
-ScaleCard.LayoutOrder = 4
+ScaleCard.LayoutOrder = 6
 makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -897,7 +880,7 @@ end)
 refreshScaleText()
 
 local Tip = makeSection(58)
-Tip.LayoutOrder = 5
+Tip.LayoutOrder = 7
 makeLabel(Tip, "Title", "NOVA TIP", UDim2.fromOffset(100, 17), UDim2.fromOffset(12, 7), 8, COLORS.Accent2, Enum.Font.GothamBold)
 makeLabel(Tip, "Text", "Scroll this panel on mobile to reach every control.", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 25), 8, COLORS.Text, Enum.Font.GothamMedium)
 
@@ -956,7 +939,7 @@ do
                 and input.Position.Y >= control.AbsolutePosition.Y
                 and input.Position.Y <= control.AbsolutePosition.Y + control.AbsoluteSize.Y
         end
-        if inside(AutoWriteButton) or inside(MinimizeButton) or inside(CloseButton) then return end
+        if inside(MinimizeButton) or inside(CloseButton) then return end
         for _, child in ipairs(Header:GetChildren()) do
             if child:IsA("GuiButton") and inside(child) then return end
         end
