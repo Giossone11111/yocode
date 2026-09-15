@@ -428,7 +428,7 @@ if not pcall(function() GUI.Parent = game.CoreGui end) then GUI.Parent = playerG
 
 local Window = Instance.new("Frame")
 Window.Name = "Window"
-Window.Size = UDim2.fromOffset(372, 430)
+Window.Size = UDim2.fromOffset(340, 390)
 Window.AnchorPoint = Vector2.new(1, 0)
 Window.Position = UDim2.new(1, -16, 0, 16)
 Window.BackgroundColor3 = COLORS.Window
@@ -445,8 +445,8 @@ InterfaceScale.Parent = Window
 
 -- Window controls: minimize/restore and close
 local windowCollapsed = false
-local normalWindowSize = UDim2.fromOffset(372, 430)
-local collapsedWindowSize = UDim2.fromOffset(372, 78)
+local normalWindowSize = UDim2.fromOffset(340, 390)
+local collapsedWindowSize = UDim2.fromOffset(340, 60)
 
 -- 1x -> 0.9x -> ... -> 0.5x
 local scaleSteps = {1, 0.9, 0.8, 0.7, 0.6, 0.5}
@@ -462,7 +462,7 @@ local function updateInterfaceScale()
     end
 
     local viewport = camera.ViewportSize
-    local fitScale = math.min((viewport.X - 28) / 372, (viewport.Y - 28) / 430)
+    local fitScale = math.min((viewport.X - 24) / 340, (viewport.Y - 24) / 390)
     if UserInputService.TouchEnabled then
         InterfaceScale.Scale = math.max(0.5, math.min(selectedScale, fitScale))
     else
@@ -492,7 +492,7 @@ AccentStrip.Parent = Window
 -- HEADER / BRAND
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 72)
+Header.Size = UDim2.new(1, 0, 0, 62)
 Header.BackgroundTransparency = 1
 Header.Active = true
 Header.ZIndex = 5
@@ -500,7 +500,7 @@ Header.Parent = Window
 
 local Brand = Instance.new("Frame")
 Brand.Size = UDim2.fromOffset(42, 42)
-Brand.Position = UDim2.fromOffset(16, 15)
+Brand.Position = UDim2.fromOffset(12, 11)
 Brand.BackgroundColor3 = COLORS.Surface2
 Brand.BorderSizePixel = 0
 Brand.Parent = Header
@@ -516,13 +516,13 @@ BrandDot.Parent = Brand
 BrandDot.Active = false
 addCorner(BrandDot, 5)
 
-makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(150, 22), UDim2.fromOffset(69, 13), 16, COLORS.White, Enum.Font.GothamBlack)
-makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(145, 18), UDim2.fromOffset(69, 36), 10, COLORS.Dim, Enum.Font.GothamMedium)
+makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(145, 22), UDim2.fromOffset(62, 10), 16, COLORS.White, Enum.Font.GothamBlack)
+makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(145, 18), UDim2.fromOffset(62, 32), 10, COLORS.Dim, Enum.Font.GothamMedium)
 
-local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(32, 30), UDim2.new(1, -114, 0, 20), 18)
+local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(32, 30), UDim2.new(1, -88, 0, 16), 18)
 MinimizeButton.ZIndex = 30
 MinimizeButton.Active = true
-local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(32, 30), UDim2.new(1, -78, 0, 20), 18)
+local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(32, 30), UDim2.new(1, -48, 0, 16), 18)
 CloseButton.ZIndex = 30
 CloseButton.Active = true
 CloseButton.TextColor3 = COLORS.Red
@@ -531,7 +531,7 @@ CloseButton.TextColor3 = COLORS.Red
 local AutoWriteButton = Instance.new("TextButton")
 AutoWriteButton.Name = "AutoWrite"
 AutoWriteButton.Size = UDim2.fromOffset(54, 28)
-AutoWriteButton.Position = UDim2.new(1, -184, 0, 21)
+AutoWriteButton.Position = UDim2.new(1, -152, 0, 17)
 AutoWriteButton.BackgroundColor3 = COLORS.Control
 AutoWriteButton.BorderSizePixel = 0
 AutoWriteButton.AutoButtonColor = false
@@ -959,9 +959,17 @@ local function setWindowCollapsed(collapsed)
     MinimizeButton.Text = collapsed and "+" or "−"
     updateInterfaceScale()
 end
-MinimizeButton.Activated:Connect(function()
-    setWindowCollapsed(not windowCollapsed)
-end)
+do
+    local minimizeBusy = false
+    local function toggleMinimize()
+        if minimizeBusy then return end
+        minimizeBusy = true
+        setWindowCollapsed(not windowCollapsed)
+        task.delay(0.12, function() minimizeBusy = false end)
+    end
+    MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
+    MinimizeButton.TouchTap:Connect(toggleMinimize)
+end
 CloseButton.Activated:Connect(function()
     pcall(function()
         if aceListenConnection then aceListenConnection:Disconnect(); aceListenConnection = nil end
