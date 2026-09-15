@@ -338,84 +338,84 @@ end
 
 -- NOVA UI / PERFORMANCE LAYER --
 local COLORS = {
-    Window = Color3.fromRGB(9, 10, 14),
-    Surface = Color3.fromRGB(15, 17, 23),
-    Surface2 = Color3.fromRGB(20, 23, 31),
-    Control = Color3.fromRGB(27, 31, 41),
-    Border = Color3.fromRGB(48, 54, 70),
-    White = Color3.fromRGB(245, 247, 250),
-    Text = Color3.fromRGB(179, 186, 201),
-    Dim = Color3.fromRGB(102, 110, 128),
-    Accent = Color3.fromRGB(132, 94, 255),
-    Accent2 = Color3.fromRGB(84, 204, 255),
-    Green = Color3.fromRGB(71, 224, 138),
+    Window = Color3.fromRGB(10, 11, 16),
+    Surface = Color3.fromRGB(17, 19, 27),
+    Surface2 = Color3.fromRGB(23, 26, 36),
+    Control = Color3.fromRGB(29, 33, 44),
+    Border = Color3.fromRGB(47, 53, 69),
+    White = Color3.fromRGB(246, 248, 252),
+    Text = Color3.fromRGB(185, 191, 205),
+    Dim = Color3.fromRGB(108, 116, 135),
+    Accent = Color3.fromRGB(125, 91, 255),
+    Accent2 = Color3.fromRGB(82, 207, 255),
+    Green = Color3.fromRGB(67, 224, 137),
     Red = Color3.fromRGB(246, 91, 108),
     Amber = Color3.fromRGB(247, 183, 89),
 }
 
 local function addCorner(parent, radius)
-    local value = Instance.new("UICorner")
-    value.CornerRadius = UDim.new(0, radius)
-    value.Parent = parent
-    return value
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius)
+    c.Parent = parent
+    return c
 end
 
 local function addStroke(parent, color, thickness, transparency)
-    local value = Instance.new("UIStroke")
-    value.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    value.Color = color
-    value.Thickness = thickness or 1
-    value.Transparency = transparency or 0
-    value.Parent = parent
-    return value
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = color
+    s.Thickness = thickness or 1
+    s.Transparency = transparency or 0
+    s.Parent = parent
+    return s
 end
 
 local function makeLabel(parent, name, text, size, position, textSize, color, font)
-    local label = Instance.new("TextLabel")
-    label.Name = name
-    label.Size = size
-    label.Position = position
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextSize = textSize
-    label.TextColor3 = color
-    label.Font = font or Enum.Font.GothamMedium
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Parent = parent
-    return label
+    local l = Instance.new("TextLabel")
+    l.Name = name
+    l.Size = size
+    l.Position = position
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextSize = textSize
+    l.TextColor3 = color
+    l.Font = font or Enum.Font.GothamMedium
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextYAlignment = Enum.TextYAlignment.Center
+    l.Parent = parent
+    return l
 end
 
 local function makeButton(parent, name, text, size, position, textSize)
-    local button = Instance.new("TextButton")
-    button.Name = name
-    button.Size = size
-    button.Position = position
-    button.BackgroundColor3 = COLORS.Control
-    button.BorderSizePixel = 0
-    button.AutoButtonColor = false
-    button.Text = text
-    button.TextSize = textSize or 10
-    button.TextColor3 = COLORS.Text
-    button.Font = Enum.Font.GothamBold
-    button.Parent = parent
-    button.Active = true
-    button.ZIndex = math.max(button.ZIndex, 20)
-    addCorner(button, 10)
-    addStroke(button, COLORS.Border, 1, 0.15)
-    return button
+    local b = Instance.new("TextButton")
+    b.Name = name
+    b.Size = size
+    b.Position = position
+    b.BackgroundColor3 = COLORS.Control
+    b.BorderSizePixel = 0
+    b.AutoButtonColor = false
+    b.Text = text
+    b.TextSize = textSize or 10
+    b.TextColor3 = COLORS.Text
+    b.Font = Enum.Font.GothamBold
+    b.Active = true
+    b.ZIndex = 20
+    b.Parent = parent
+    addCorner(b, 10)
+    addStroke(b, COLORS.Border, 1, 0.12)
+    return b
 end
 
 -- CLEANUP OLD GUIS
 pcall(function()
     for _, name in ipairs({"ACECodeSniperUI", "AutoTypeCodesUI", "ACEPaste", "NovaRedeemerUI"}) do
-        local previous = game.CoreGui:FindFirstChild(name)
-        if previous then previous:Destroy() end
+        local old = game.CoreGui:FindFirstChild(name)
+        if old then old:Destroy() end
     end
 end)
 for _, name in ipairs({"ACECodeSniperUI", "AutoTypeCodesUI", "ACEPaste", "NovaRedeemerUI"}) do
-    local previous = playerGui:FindFirstChild(name)
-    if previous then previous:Destroy() end
+    local old = playerGui:FindFirstChild(name)
+    if old then old:Destroy() end
 end
 
 -- MAIN GUI
@@ -426,33 +426,32 @@ GUI.IgnoreGuiInset = true
 GUI.DisplayOrder = 999
 if not pcall(function() GUI.Parent = game.CoreGui end) then GUI.Parent = playerGui end
 
+-- Compact by default: designed for small phone screens.
+local NORMAL_SIZE = UDim2.fromOffset(300, 340)
+local COLLAPSED_SIZE = UDim2.fromOffset(300, 54)
+
 local Window = Instance.new("Frame")
 Window.Name = "Window"
-Window.Size = UDim2.fromOffset(340, 390)
+Window.Size = NORMAL_SIZE
 Window.AnchorPoint = Vector2.new(1, 0)
-Window.Position = UDim2.new(1, -16, 0, 16)
+Window.Position = UDim2.new(1, -10, 0, 10)
 Window.BackgroundColor3 = COLORS.Window
 Window.BorderSizePixel = 0
 Window.ClipsDescendants = true
 Window.Parent = GUI
-addCorner(Window, 20)
-addStroke(Window, COLORS.Border, 1, 0.05)
+addCorner(Window, 17)
+addStroke(Window, COLORS.Border, 1, 0.02)
 
 local InterfaceScale = Instance.new("UIScale")
 InterfaceScale.Name = "InterfaceScale"
 InterfaceScale.Scale = 1
 InterfaceScale.Parent = Window
 
--- Window controls: minimize/restore and close
-local windowCollapsed = false
-local normalWindowSize = UDim2.fromOffset(340, 390)
-local collapsedWindowSize = UDim2.fromOffset(340, 60)
-
--- 1x -> 0.9x -> ... -> 0.5x
 local scaleSteps = {1, 0.9, 0.8, 0.7, 0.6, 0.5}
 local scaleIndex = 1
-local selectedScale = scaleSteps[scaleIndex]
+local selectedScale = scaleSteps[1]
 local viewportConnection
+local windowCollapsed = false
 
 local function updateInterfaceScale()
     local camera = workspace.CurrentCamera
@@ -460,18 +459,17 @@ local function updateInterfaceScale()
         InterfaceScale.Scale = selectedScale
         return
     end
-
     local viewport = camera.ViewportSize
-    local fitScale = math.min((viewport.X - 24) / 340, (viewport.Y - 24) / 390)
+    local fit = math.min((viewport.X - 12) / 300, (viewport.Y - 12) / 340)
     if UserInputService.TouchEnabled then
-        InterfaceScale.Scale = math.max(0.5, math.min(selectedScale, fitScale))
+        InterfaceScale.Scale = math.max(0.5, math.min(selectedScale, fit))
     else
         InterfaceScale.Scale = selectedScale
     end
 end
 
 local function watchViewport()
-    if viewportConnection then viewportConnection:Disconnect(); viewportConnection = nil end
+    if viewportConnection then viewportConnection:Disconnect() end
     local camera = workspace.CurrentCamera
     if camera then
         viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateInterfaceScale)
@@ -481,85 +479,82 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchViewport)
 watchViewport()
 
--- Accent line
 local AccentStrip = Instance.new("Frame")
-AccentStrip.Name = "AccentStrip"
-AccentStrip.Size = UDim2.new(1, 0, 0, 3)
+AccentStrip.Size = UDim2.new(1, 0, 0, 2)
 AccentStrip.BackgroundColor3 = COLORS.Accent
 AccentStrip.BorderSizePixel = 0
+AccentStrip.ZIndex = 4
 AccentStrip.Parent = Window
 
--- HEADER / BRAND
+-- HEADER
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 62)
+Header.Size = UDim2.new(1, 0, 0, 54)
 Header.BackgroundTransparency = 1
 Header.Active = true
 Header.ZIndex = 5
 Header.Parent = Window
 
 local Brand = Instance.new("Frame")
-Brand.Size = UDim2.fromOffset(42, 42)
-Brand.Position = UDim2.fromOffset(12, 11)
+Brand.Size = UDim2.fromOffset(34, 34)
+Brand.Position = UDim2.fromOffset(10, 10)
 Brand.BackgroundColor3 = COLORS.Surface2
 Brand.BorderSizePixel = 0
+Brand.ZIndex = 6
 Brand.Parent = Header
-addCorner(Brand, 13)
-addStroke(Brand, COLORS.Border, 1, 0.2)
+addCorner(Brand, 11)
+addStroke(Brand, COLORS.Border, 1, 0.15)
 
 local BrandDot = Instance.new("Frame")
-BrandDot.Size = UDim2.fromOffset(10, 10)
-BrandDot.Position = UDim2.new(0.5, -5, 0.5, -5)
+BrandDot.Size = UDim2.fromOffset(8, 8)
+BrandDot.Position = UDim2.new(0.5, -4, 0.5, -4)
 BrandDot.BackgroundColor3 = COLORS.Accent2
 BrandDot.BorderSizePixel = 0
+BrandDot.ZIndex = 7
 BrandDot.Parent = Brand
-BrandDot.Active = false
-addCorner(BrandDot, 5)
+addCorner(BrandDot, 4)
 
-makeLabel(Header, "Title", "NOVA REDEEMER", UDim2.fromOffset(145, 22), UDim2.fromOffset(62, 10), 16, COLORS.White, Enum.Font.GothamBlack)
-makeLabel(Header, "Subtitle", "lightweight code control", UDim2.fromOffset(145, 18), UDim2.fromOffset(62, 32), 10, COLORS.Dim, Enum.Font.GothamMedium)
+makeLabel(Header, "Title", "NOVA", UDim2.fromOffset(100, 18), UDim2.fromOffset(54, 7), 14, COLORS.White, Enum.Font.GothamBlack).ZIndex = 6
+makeLabel(Header, "Subtitle", "REDEEMER  •  FAST", UDim2.fromOffset(125, 15), UDim2.fromOffset(54, 26), 8, COLORS.Dim, Enum.Font.GothamBold).ZIndex = 6
 
-local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(32, 30), UDim2.new(1, -88, 0, 16), 18)
-MinimizeButton.ZIndex = 30
-MinimizeButton.Active = true
-local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(32, 30), UDim2.new(1, -48, 0, 16), 18)
-CloseButton.ZIndex = 30
-CloseButton.Active = true
-CloseButton.TextColor3 = COLORS.Red
-
--- MAIN ENABLE SWITCH
+-- Main on/off switch is deliberately separated from the window buttons.
 local AutoWriteButton = Instance.new("TextButton")
 AutoWriteButton.Name = "AutoWrite"
-AutoWriteButton.Size = UDim2.fromOffset(54, 28)
-AutoWriteButton.Position = UDim2.new(1, -152, 0, 17)
+AutoWriteButton.Size = UDim2.fromOffset(44, 24)
+AutoWriteButton.Position = UDim2.new(1, -148, 0, 15)
 AutoWriteButton.BackgroundColor3 = COLORS.Control
 AutoWriteButton.BorderSizePixel = 0
 AutoWriteButton.AutoButtonColor = false
 AutoWriteButton.Text = ""
-AutoWriteButton.ZIndex = 25
+AutoWriteButton.ZIndex = 30
 AutoWriteButton.Active = true
 AutoWriteButton.Parent = Header
-addCorner(AutoWriteButton, 14)
+addCorner(AutoWriteButton, 12)
 local AutoWriteStroke = addStroke(AutoWriteButton, COLORS.Border, 1, 0.05)
 
 local AutoWriteKnob = Instance.new("Frame")
-AutoWriteKnob.Name = "Knob"
-AutoWriteKnob.Size = UDim2.fromOffset(22, 22)
-AutoWriteKnob.Position = UDim2.new(0, 3, 0.5, -11)
+AutoWriteKnob.Size = UDim2.fromOffset(18, 18)
+AutoWriteKnob.Position = UDim2.new(0, 3, 0.5, -9)
 AutoWriteKnob.BackgroundColor3 = COLORS.White
 AutoWriteKnob.BorderSizePixel = 0
-AutoWriteKnob.ZIndex = 8
+AutoWriteKnob.ZIndex = 31
 AutoWriteKnob.Parent = AutoWriteButton
-addCorner(AutoWriteKnob, 11)
+addCorner(AutoWriteKnob, 9)
+
+local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(30, 30), UDim2.new(1, -98, 0, 12), 17)
+MinimizeButton.ZIndex = 40
+local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(30, 30), UDim2.new(1, -58, 0, 12), 17)
+CloseButton.ZIndex = 40
+CloseButton.TextColor3 = COLORS.Red
 
 local Console, ConsoleOutput, updateConsoleCanvas
 local featureStates = {}
 local CONSOLE_COLORS = {
-    Dim = "rgb(102,110,128)",
+    Dim = "rgb(108,116,135)",
     Amber = "rgb(247,183,89)",
-    Green = "rgb(71,224,138)",
+    Green = "rgb(67,224,137)",
     Red = "rgb(246,91,108)",
-    Cyan = "rgb(84,204,255)",
+    Cyan = "rgb(82,207,255)",
 }
 
 local function scrollConsoleToBottom()
@@ -574,16 +569,11 @@ end
 local function appendConsoleStatus(name, activated)
     if not ConsoleOutput then return end
     local state = activated and "ON" or "OFF"
-    local stateColor = activated and CONSOLE_COLORS.Green or CONSOLE_COLORS.Red
-    local line = '<font color="' .. CONSOLE_COLORS.Dim .. '">[setting]</font> '
-        .. '<font color="' .. CONSOLE_COLORS.Amber .. '">' .. name .. "</font> "
-        .. '<font color="' .. CONSOLE_COLORS.Dim .. '">-&gt;</font> '
-        .. '<font color="' .. stateColor .. '">' .. state .. "</font>"
-    if ConsoleOutput.Text == "" then
-        ConsoleOutput.Text = line
-    else
-        ConsoleOutput.Text = ConsoleOutput.Text .. "\n\n" .. line
-    end
+    local color = activated and CONSOLE_COLORS.Green or CONSOLE_COLORS.Red
+    local line = '<font color="' .. CONSOLE_COLORS.Cyan .. '">(NOVA)</font> '
+        .. '<font color="' .. CONSOLE_COLORS.Dim .. '">' .. tostring(name) .. '</font>  '
+        .. '<font color="' .. color .. '">' .. state .. '</font>'
+    if ConsoleOutput.Text == "" then ConsoleOutput.Text = line else ConsoleOutput.Text = ConsoleOutput.Text .. "\n" .. line end
     scrollConsoleToBottom()
 end
 
@@ -592,9 +582,7 @@ local function refreshMainToggle()
     AutoWriteButton.BackgroundColor3 = autoWriteEnabled and COLORS.Accent or COLORS.Control
     AutoWriteStroke.Color = autoWriteEnabled and COLORS.Accent2 or COLORS.Border
     AutoWriteKnob.BackgroundColor3 = autoWriteEnabled and COLORS.Window or COLORS.White
-    AutoWriteKnob.Position = autoWriteEnabled
-        and UDim2.new(1, -25, 0.5, -11)
-        or UDim2.new(0, 3, 0.5, -11)
+    AutoWriteKnob.Position = autoWriteEnabled and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
 end
 refreshMainToggle()
 
@@ -610,62 +598,46 @@ local function toggleAutoWrite()
     saveConfig()
     _lastStatusMsg = nil
     refreshMainToggle()
-
     if ConsoleOutput then
-        if autoWriteEnabled then
-            ConsoleOutput.Text = '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
-            for _, featureName in ipairs({"Auto submit", "Retype invalid"}) do
-                if featureStates[featureName] then appendConsoleStatus(featureName, true) end
-            end
-        else
-            ConsoleOutput.Text = '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
-        end
+        ConsoleOutput.Text = autoWriteEnabled
+            and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
+            or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
         scrollConsoleToBottom()
     end
 end
 AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
-local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -32, 0, 1)
-HeaderLine.Position = UDim2.fromOffset(16, 64)
-HeaderLine.BackgroundColor3 = COLORS.Border
-HeaderLine.BackgroundTransparency = 0.15
-HeaderLine.BorderSizePixel = 0
-HeaderLine.Parent = Header
-
 -- TABS
 local Tabs = Instance.new("Frame")
 Tabs.Name = "Tabs"
-Tabs.Size = UDim2.new(1, -32, 0, 44)
-Tabs.Position = UDim2.fromOffset(16, 77)
+Tabs.Size = UDim2.new(1, -20, 0, 38)
+Tabs.Position = UDim2.fromOffset(10, 62)
 Tabs.BackgroundColor3 = COLORS.Surface
 Tabs.BorderSizePixel = 0
 Tabs.Parent = Window
-addCorner(Tabs, 12)
-addStroke(Tabs, COLORS.Border, 1, 0.2)
+addCorner(Tabs, 11)
+addStroke(Tabs, COLORS.Border, 1, 0.18)
 
 local function makeTab(name, text, x)
-    local button = makeButton(Tabs, name, text, UDim2.fromOffset(162, 34), UDim2.fromOffset(x, 5), 10)
-    button.TextColor3 = COLORS.Dim
-    return button
+    local b = makeButton(Tabs, name, text, UDim2.new(0.5, -6, 1, -8), UDim2.fromOffset(x, 4), 9)
+    b.TextColor3 = COLORS.Dim
+    return b
 end
+local ConsoleTab = makeTab("ConsoleTab", "CONSOLE", 4)
+local SnipeTab = makeTab("SnipeTab", "SNIPE", 0)
+SnipeTab.Position = UDim2.new(0.5, 2, 0, 4)
 
-local ConsoleTab = makeTab("ConsoleTab", "CONSOLE", 5)
-local SnipeTab = makeTab("SnipeTab", "SNIPE", 169)
-
-local ConsolePage = Instance.new("Frame")
-ConsolePage.Name = "ConsolePage"
-ConsolePage.Size = UDim2.new(1, -32, 1, -138)
-ConsolePage.Position = UDim2.fromOffset(16, 129)
-ConsolePage.BackgroundTransparency = 1
-ConsolePage.Parent = Window
-
-local SnipePage = Instance.new("Frame")
-SnipePage.Name = "SnipePage"
-SnipePage.Size = UDim2.new(1, -32, 1, -138)
-SnipePage.Position = UDim2.fromOffset(16, 129)
-SnipePage.BackgroundTransparency = 1
-SnipePage.Parent = Window
+local function newPage(name)
+    local p = Instance.new("Frame")
+    p.Name = name
+    p.Size = UDim2.new(1, -20, 1, -112)
+    p.Position = UDim2.fromOffset(10, 108)
+    p.BackgroundTransparency = 1
+    p.Parent = Window
+    return p
+end
+local ConsolePage = newPage("ConsolePage")
+local SnipePage = newPage("SnipePage")
 
 local function setTabVisual(button, active)
     button.BackgroundColor3 = active and COLORS.Accent or COLORS.Control
@@ -683,24 +655,30 @@ end
 ConsoleTab.Activated:Connect(function() activatePage(ConsolePage) end)
 SnipeTab.Activated:Connect(function() activatePage(SnipePage) end)
 
--- CONSOLE PAGE: console only + compact controls
-local ConsoleHeader = Instance.new("Frame")
-ConsoleHeader.Size = UDim2.new(1, 0, 0, 48)
-ConsoleHeader.BackgroundTransparency = 1
-ConsoleHeader.Parent = ConsolePage
-makeLabel(ConsoleHeader, "Title", "LIVE CONSOLE", UDim2.fromOffset(190, 20), UDim2.fromOffset(2, 2), 12, COLORS.White, Enum.Font.GothamBold)
-makeLabel(ConsoleHeader, "Hint", "runtime events & captured codes", UDim2.fromOffset(245, 17), UDim2.fromOffset(2, 22), 9, COLORS.Dim, Enum.Font.GothamMedium)
+-- CONSOLE: dedicated scrolling log
+local ConsoleFrame = Instance.new("Frame")
+ConsoleFrame.Size = UDim2.new(1, 0, 1, 0)
+ConsoleFrame.BackgroundColor3 = COLORS.Surface
+ConsoleFrame.BorderSizePixel = 0
+ConsoleFrame.Parent = ConsolePage
+addCorner(ConsoleFrame, 13)
+addStroke(ConsoleFrame, COLORS.Border, 1, 0.2)
 
-local LiveChip = makeButton(ConsoleHeader, "LiveChip", "●  LIVE", UDim2.fromOffset(72, 28), UDim2.new(1, -72, 0, 7), 9)
+local ConsoleTitle = makeLabel(ConsoleFrame, "Title", "LIVE CONSOLE", UDim2.fromOffset(150, 18), UDim2.fromOffset(12, 8), 11, COLORS.White, Enum.Font.GothamBold)
+ConsoleTitle.ZIndex = 3
+local ConsoleHint = makeLabel(ConsoleFrame, "Hint", "events • codes • status", UDim2.fromOffset(160, 14), UDim2.fromOffset(12, 25), 7, COLORS.Dim, Enum.Font.GothamMedium)
+ConsoleHint.ZIndex = 3
+
+local LiveChip = makeButton(ConsoleFrame, "Live", "● LIVE", UDim2.fromOffset(62, 24), UDim2.new(1, -74, 0, 9), 8)
 LiveChip.TextColor3 = COLORS.Green
-LiveChip.BackgroundColor3 = Color3.fromRGB(17, 39, 28)
+LiveChip.BackgroundColor3 = Color3.fromRGB(16, 37, 27)
 local liveStroke = LiveChip:FindFirstChildOfClass("UIStroke")
 if liveStroke then liveStroke.Color = COLORS.Green end
 
 Console = Instance.new("ScrollingFrame")
 Console.Name = "Console"
-Console.Size = UDim2.new(1, 0, 1, -58)
-Console.Position = UDim2.fromOffset(0, 50)
+Console.Size = UDim2.new(1, -20, 1, -55)
+Console.Position = UDim2.fromOffset(10, 47)
 Console.BackgroundColor3 = Color3.fromRGB(7, 8, 11)
 Console.BorderSizePixel = 0
 Console.ClipsDescendants = true
@@ -709,32 +687,24 @@ Console.ScrollingEnabled = true
 Console.ScrollingDirection = Enum.ScrollingDirection.Y
 Console.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
 Console.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-Console.CanvasSize = UDim2.new(0, 0, 0, 0)
-Console.AutomaticCanvasSize = Enum.AutomaticSize.None
 Console.ScrollBarThickness = 3
 Console.ScrollBarImageColor3 = COLORS.Dim
-Console.ZIndex = 3
-Console.Parent = ConsolePage
-addCorner(Console, 14)
-addStroke(Console, COLORS.Border, 1, 0.25)
-
-local ConsoleTopLine = Instance.new("Frame")
-ConsoleTopLine.Size = UDim2.new(1, 0, 0, 1)
-ConsoleTopLine.BackgroundColor3 = COLORS.Accent
-ConsoleTopLine.BorderSizePixel = 0
-ConsoleTopLine.Parent = Console
+Console.CanvasSize = UDim2.new(0, 0, 0, 0)
+Console.Parent = ConsoleFrame
+addCorner(Console, 10)
+addStroke(Console, COLORS.Border, 1, 0.3)
 
 ConsoleOutput = Instance.new("TextLabel")
 ConsoleOutput.Name = "ConsoleOutput"
-ConsoleOutput.Size = UDim2.new(1, -20, 0, 90)
+ConsoleOutput.Size = UDim2.new(1, -18, 0, 20)
 ConsoleOutput.AutomaticSize = Enum.AutomaticSize.Y
-ConsoleOutput.Position = UDim2.fromOffset(10, 10)
+ConsoleOutput.Position = UDim2.fromOffset(9, 9)
 ConsoleOutput.BackgroundTransparency = 1
 ConsoleOutput.RichText = true
 ConsoleOutput.Text = autoWriteEnabled
     and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
     or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
-ConsoleOutput.TextSize = 12
+ConsoleOutput.TextSize = 10
 ConsoleOutput.Font = Enum.Font.Code
 ConsoleOutput.TextColor3 = COLORS.Dim
 ConsoleOutput.TextXAlignment = Enum.TextXAlignment.Left
@@ -743,192 +713,181 @@ ConsoleOutput.TextWrapped = true
 ConsoleOutput.ZIndex = 4
 ConsoleOutput.Parent = Console
 
-local ClearConsole = makeButton(ConsolePage, "ClearConsole", "CLEAR", UDim2.fromOffset(66, 28), UDim2.new(1, -66, 0, 6), 9)
-ClearConsole.Visible = false
+local ClearConsole = makeButton(ConsoleFrame, "ClearConsole", "CLEAR", UDim2.fromOffset(54, 22), UDim2.new(1, -66, 0, 8), 7)
 ClearConsole.Activated:Connect(function()
-    if ConsoleOutput then
-        ConsoleOutput.Text = autoWriteEnabled
-            and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
-            or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
-        scrollConsoleToBottom()
-    end
+    ConsoleOutput.Text = autoWriteEnabled
+        and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
+        or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
+    scrollConsoleToBottom()
 end)
 
-local CONSOLE_BOTTOM_PADDING = 24
 updateConsoleCanvas = function()
     if not Console or not ConsoleOutput then return end
-    local contentHeight = ConsoleOutput.Position.Y.Offset + ConsoleOutput.AbsoluteSize.Y + CONSOLE_BOTTOM_PADDING
-    Console.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+    Console.CanvasSize = UDim2.new(0, 0, 0, ConsoleOutput.Position.Y.Offset + ConsoleOutput.AbsoluteSize.Y + 18)
 end
 ConsoleOutput:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateConsoleCanvas)
 task.defer(updateConsoleCanvas)
 
--- SNIPE PAGE
-local SnipeHero = Instance.new("Frame")
-SnipeHero.Size = UDim2.new(1, 0, 0, 68)
-SnipeHero.BackgroundColor3 = COLORS.Surface
-SnipeHero.BorderSizePixel = 0
-SnipeHero.Parent = SnipePage
-addCorner(SnipeHero, 14)
-addStroke(SnipeHero, COLORS.Border, 1, 0.2)
+-- SNIPE: a real scrolling settings page, compact and mobile-friendly.
+local SnipeScroll = Instance.new("ScrollingFrame")
+SnipeScroll.Name = "SnipeScroll"
+SnipeScroll.Size = UDim2.new(1, 0, 1, 0)
+SnipeScroll.BackgroundTransparency = 1
+SnipeScroll.BorderSizePixel = 0
+SnipeScroll.ScrollBarThickness = 3
+SnipeScroll.ScrollBarImageColor3 = COLORS.Dim
+SnipeScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+SnipeScroll.ScrollingEnabled = true
+SnipeScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+SnipeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+SnipeScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+SnipeScroll.Parent = SnipePage
 
-makeLabel(SnipeHero, "Title", "SNIPE ENGINE", UDim2.fromOffset(190, 20), UDim2.fromOffset(14, 10), 12, COLORS.White, Enum.Font.GothamBold)
-makeLabel(SnipeHero, "Hint", "capture → assemble → submit", UDim2.fromOffset(210, 18), UDim2.fromOffset(14, 33), 9, COLORS.Dim, Enum.Font.GothamMedium)
+local SnipeContent = Instance.new("Frame")
+SnipeContent.Name = "SnipeContent"
+SnipeContent.Size = UDim2.new(1, -8, 0, 1)
+SnipeContent.BackgroundTransparency = 1
+SnipeContent.Parent = SnipeScroll
 
-local StatePill = makeButton(SnipeHero, "State", autoWriteEnabled and "READY" or "PAUSED", UDim2.fromOffset(76, 28), UDim2.new(1, -90, 0.5, -14), 9)
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.Padding = UDim.new(0, 8)
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+contentLayout.Parent = SnipeContent
+
+local contentPadding = Instance.new("UIPadding")
+contentPadding.PaddingLeft = UDim.new(0, 1)
+contentPadding.PaddingRight = UDim.new(0, 5)
+contentPadding.PaddingBottom = UDim.new(0, 12)
+contentPadding.Parent = SnipeContent
+
+local function makeSection(height)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, height)
+    f.BackgroundColor3 = COLORS.Surface
+    f.BorderSizePixel = 0
+    f.LayoutOrder = 1
+    f.Parent = SnipeContent
+    addCorner(f, 12)
+    addStroke(f, COLORS.Border, 1, 0.22)
+    return f
+end
+
+local Hero = makeSection(64)
+makeLabel(Hero, "Eyebrow", "SNIPE ENGINE", UDim2.fromOffset(140, 15), UDim2.fromOffset(12, 8), 8, COLORS.Dim, Enum.Font.GothamBold)
+makeLabel(Hero, "Title", "Capture  →  Assemble  →  Submit", UDim2.fromOffset(220, 20), UDim2.fromOffset(12, 25), 10, COLORS.White, Enum.Font.GothamBold)
+local StatePill = makeButton(Hero, "State", autoWriteEnabled and "READY" or "PAUSED", UDim2.fromOffset(64, 25), UDim2.new(1, -76, 0, 20), 8)
 local stateStroke = StatePill:FindFirstChildOfClass("UIStroke")
 
 local function refreshStatePill()
     StatePill.Text = autoWriteEnabled and "READY" or "PAUSED"
     StatePill.TextColor3 = autoWriteEnabled and COLORS.Green or COLORS.Dim
-    StatePill.BackgroundColor3 = autoWriteEnabled and Color3.fromRGB(16, 38, 27) or COLORS.Control
+    StatePill.BackgroundColor3 = autoWriteEnabled and Color3.fromRGB(16, 37, 27) or COLORS.Control
     if stateStroke then stateStroke.Color = autoWriteEnabled and COLORS.Green or COLORS.Border end
 end
 refreshStatePill()
-
 AutoWriteButton.Activated:Connect(refreshStatePill)
 
-local Settings = Instance.new("Frame")
-Settings.Name = "Settings"
-Settings.Size = UDim2.new(1, 0, 0, 202)
-Settings.Position = UDim2.fromOffset(0, 78)
-Settings.BackgroundTransparency = 1
-Settings.Parent = SnipePage
-
-local function makeCard(name, position, size)
-    local card = Instance.new("Frame")
-    card.Name = name
-    card.Position = position
-    card.Size = size
-    card.BackgroundColor3 = COLORS.Surface
-    card.BorderSizePixel = 0
-    card.Parent = Settings
-    addCorner(card, 12)
-    addStroke(card, COLORS.Border, 1, 0.25)
-    return card
-end
-
-local function makeStateButton(parent, enabled, consoleName, onToggle)
-    local button = makeButton(parent, "State", enabled and "ON" or "OFF", UDim2.fromOffset(52, 26), UDim2.new(1, -64, 0.5, -13), 9)
-    featureStates[consoleName] = enabled
-    button.BackgroundColor3 = enabled and COLORS.Accent or COLORS.Control
-    button.TextColor3 = enabled and COLORS.White or COLORS.Dim
-    local outline = button:FindFirstChildOfClass("UIStroke")
-    if outline then outline.Color = enabled and COLORS.Accent2 or COLORS.Border end
-
-    local last = 0
-    local function toggleState()
-        local now = os.clock()
-        if now - last < 0.1 then return end
-        last = now
-        enabled = not enabled
-        featureStates[consoleName] = enabled
-        button.Text = enabled and "ON" or "OFF"
-        button.BackgroundColor3 = enabled and COLORS.Accent or COLORS.Control
-        button.TextColor3 = enabled and COLORS.White or COLORS.Dim
+local function makeStateRow(title, hint, enabled, key, onToggle)
+    local row = makeSection(58)
+    row.LayoutOrder = 2
+    makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
+    makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
+    local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
+    featureStates[key] = enabled
+    local outline = b:FindFirstChildOfClass("UIStroke")
+    local function paint()
+        b.Text = enabled and "ON" or "OFF"
+        b.BackgroundColor3 = enabled and COLORS.Accent or COLORS.Control
+        b.TextColor3 = enabled and COLORS.White or COLORS.Dim
         if outline then outline.Color = enabled and COLORS.Accent2 or COLORS.Border end
-        if autoWriteEnabled then appendConsoleStatus(consoleName, enabled) end
-        if onToggle then onToggle(enabled) end
     end
-    button.Activated:Connect(toggleState)
-    return button
+    paint()
+    b.Activated:Connect(function()
+        enabled = not enabled
+        featureStates[key] = enabled
+        paint()
+        if autoWriteEnabled then appendConsoleStatus(key, enabled) end
+        if onToggle then onToggle(enabled) end
+    end)
 end
 
-local AutoCard = makeCard("AutoSubmit", UDim2.fromOffset(0, 0), UDim2.fromOffset(163, 56))
-makeLabel(AutoCard, "Title", "Auto submit", UDim2.new(1, -78, 0, 18), UDim2.fromOffset(13, 8), 11, COLORS.White, Enum.Font.GothamMedium)
-makeLabel(AutoCard, "Hint", "submit captured code", UDim2.new(1, -78, 0, 16), UDim2.fromOffset(13, 29), 8, COLORS.Dim, Enum.Font.GothamMedium)
-makeStateButton(AutoCard, _autoAccept, "Auto submit", function(state)
+makeStateRow("Auto submit", "submit captured code", _autoAccept, "Auto submit", function(state)
     _autoAccept = state
     savedConfig.autoSubmit = state
     saveConfig()
 end)
 
-local RetypeCard = makeCard("RetypeInvalid", UDim2.fromOffset(171, 0), UDim2.fromOffset(163, 56))
-makeLabel(RetypeCard, "Title", "Retype invalid", UDim2.new(1, -78, 0, 18), UDim2.fromOffset(13, 8), 11, COLORS.White, Enum.Font.GothamMedium)
-makeLabel(RetypeCard, "Hint", "restore rejected text", UDim2.new(1, -78, 0, 16), UDim2.fromOffset(13, 29), 8, COLORS.Dim, Enum.Font.GothamMedium)
-makeStateButton(RetypeCard, _retypeInvalid, "Retype invalid", function(state)
+makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype invalid", function(state)
     _retypeInvalid = state
     savedConfig.retypeInvalid = state
     saveConfig()
 end)
 
-local DelayCard = makeCard("SubmitAfter", UDim2.fromOffset(0, 66), UDim2.fromOffset(334, 67))
-makeLabel(DelayCard, "Title", "Submit after", UDim2.fromOffset(160, 20), UDim2.fromOffset(13, 8), 11, COLORS.White, Enum.Font.GothamMedium)
-makeLabel(DelayCard, "Hint", "captured parts", UDim2.fromOffset(160, 18), UDim2.fromOffset(13, 31), 8, COLORS.Dim, Enum.Font.GothamMedium)
+local Delay = makeSection(62)
+Delay.LayoutOrder = 3
+makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
+makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
-local CounterShell = Instance.new("Frame")
-CounterShell.Name = "Counter"
-CounterShell.Size = UDim2.fromOffset(126, 40)
-CounterShell.Position = UDim2.new(1, -139, 0.5, -20)
-CounterShell.BackgroundColor3 = COLORS.Control
-CounterShell.BorderSizePixel = 0
-CounterShell.Parent = DelayCard
-addCorner(CounterShell, 10)
-addStroke(CounterShell, COLORS.Border, 1, 0.15)
+local Counter = Instance.new("Frame")
+Counter.Size = UDim2.fromOffset(118, 38)
+Counter.Position = UDim2.new(1, -130, 0.5, -19)
+Counter.BackgroundColor3 = COLORS.Control
+Counter.BorderSizePixel = 0
+Counter.Parent = Delay
+addCorner(Counter, 10)
 
-local Minus = makeButton(CounterShell, "Minus", "−", UDim2.fromOffset(32, 32), UDim2.fromOffset(4, 4), 18)
-Minus.TextColor3 = COLORS.White
-local Count = makeLabel(CounterShell, "Count", tostring(_submitAfter), UDim2.fromOffset(50, 32), UDim2.fromOffset(38, 4), 15, COLORS.White, Enum.Font.GothamBlack)
+local Minus = makeButton(Counter, "Minus", "−", UDim2.fromOffset(29, 30), UDim2.fromOffset(4, 4), 15)
+local Count = makeLabel(Counter, "Count", tostring(_submitAfter), UDim2.fromOffset(48, 30), UDim2.fromOffset(35, 4), 13, COLORS.White, Enum.Font.GothamBlack)
 Count.TextXAlignment = Enum.TextXAlignment.Center
-local Plus = makeButton(CounterShell, "Plus", "+", UDim2.fromOffset(32, 32), UDim2.new(1, -36, 0, 4), 16)
-Plus.TextColor3 = COLORS.White
+local Plus = makeButton(Counter, "Plus", "+", UDim2.fromOffset(29, 30), UDim2.new(1, -33, 0, 4), 14)
 
-local function decr()
+Minus.Activated:Connect(function()
     _submitAfter = math.max(1, _submitAfter - 1)
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
     clearAceCapture()
     saveConfig()
-end
-
-local function incr()
+end)
+Plus.Activated:Connect(function()
     _submitAfter += 1
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
     clearAceCapture()
     saveConfig()
-end
-Minus.Activated:Connect(decr)
-Plus.Activated:Connect(incr)
+end)
 
-local InfoCard = makeCard("Info", UDim2.fromOffset(0, 143), UDim2.fromOffset(334, 59))
-makeLabel(InfoCard, "Title", "MODE", UDim2.fromOffset(64, 18), UDim2.fromOffset(13, 8), 8, COLORS.Dim, Enum.Font.GothamBold)
-makeLabel(InfoCard, "Mode", "SNIPE / AUTO", UDim2.fromOffset(130, 20), UDim2.fromOffset(13, 25), 11, COLORS.White, Enum.Font.GothamBold)
-makeLabel(InfoCard, "ScaleLabel", "UI SCALE", UDim2.fromOffset(70, 18), UDim2.fromOffset(174, 8), 8, COLORS.Dim, Enum.Font.GothamBold)
+local ScaleCard = makeSection(62)
+ScaleCard.LayoutOrder = 4
+makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
+makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
 local ScaleShell = Instance.new("Frame")
-ScaleShell.Name = "ScaleShell"
-ScaleShell.Size = UDim2.fromOffset(132, 34)
-ScaleShell.Position = UDim2.new(1, -145, 0.5, -17)
+ScaleShell.Size = UDim2.fromOffset(118, 38)
+ScaleShell.Position = UDim2.new(1, -130, 0.5, -19)
 ScaleShell.BackgroundColor3 = COLORS.Control
 ScaleShell.BorderSizePixel = 0
-ScaleShell.Parent = InfoCard
-addCorner(ScaleShell, 9)
+ScaleShell.Parent = ScaleCard
+addCorner(ScaleShell, 10)
 
-local ScaleMinus = makeButton(ScaleShell, "Minus", "−", UDim2.fromOffset(30, 28), UDim2.fromOffset(3, 3), 16)
-local ScaleText = makeLabel(ScaleShell, "Value", "1x", UDim2.fromOffset(60, 28), UDim2.fromOffset(36, 3), 12, COLORS.White, Enum.Font.GothamBlack)
+local ScaleMinus = makeButton(ScaleShell, "Minus", "−", UDim2.fromOffset(29, 30), UDim2.fromOffset(4, 4), 15)
+local ScaleText = makeLabel(ScaleShell, "Value", "1x", UDim2.fromOffset(48, 30), UDim2.fromOffset(35, 4), 12, COLORS.White, Enum.Font.GothamBlack)
 ScaleText.TextXAlignment = Enum.TextXAlignment.Center
-local ScalePlus = makeButton(ScaleShell, "Plus", "+", UDim2.fromOffset(30, 28), UDim2.new(1, -33, 0, 3), 14)
+local ScalePlus = makeButton(ScaleShell, "Plus", "+", UDim2.fromOffset(29, 30), UDim2.new(1, -33, 0, 4), 14)
 
 local function refreshScaleText()
     local value = scaleSteps[scaleIndex]
-    ScaleText.Text = tostring(value):gsub("%.0+$", "") .. "x"
     selectedScale = value
+    ScaleText.Text = tostring(value):gsub("%.0+$", "") .. "x"
+    ScaleMinus.TextColor3 = scaleIndex == #scaleSteps and COLORS.Dim or COLORS.White
+    ScalePlus.TextColor3 = scaleIndex == 1 and COLORS.Dim or COLORS.White
     updateInterfaceScale()
-
-    local atMin = scaleIndex == #scaleSteps
-    local atMax = scaleIndex == 1
-    ScaleMinus.TextColor3 = atMin and COLORS.Dim or COLORS.White
-    ScalePlus.TextColor3 = atMax and COLORS.Dim or COLORS.White
 end
-
 ScaleMinus.Activated:Connect(function()
     if scaleIndex < #scaleSteps then
         scaleIndex += 1
         refreshScaleText()
     end
 end)
-
 ScalePlus.Activated:Connect(function()
     if scaleIndex > 1 then
         scaleIndex -= 1
@@ -937,39 +896,38 @@ ScalePlus.Activated:Connect(function()
 end)
 refreshScaleText()
 
--- FOOTER / MICRO STATUS
-local FooterLine = Instance.new("Frame")
-FooterLine.Size = UDim2.new(1, -32, 0, 1)
-FooterLine.Position = UDim2.new(0, 16, 1, -30)
-FooterLine.BackgroundColor3 = COLORS.Border
-FooterLine.BackgroundTransparency = 0.35
-FooterLine.BorderSizePixel = 0
-FooterLine.Parent = Window
+local Tip = makeSection(58)
+Tip.LayoutOrder = 5
+makeLabel(Tip, "Title", "NOVA TIP", UDim2.fromOffset(100, 17), UDim2.fromOffset(12, 7), 8, COLORS.Accent2, Enum.Font.GothamBold)
+makeLabel(Tip, "Text", "Scroll this panel on mobile to reach every control.", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 25), 8, COLORS.Text, Enum.Font.GothamMedium)
 
-local Footer = makeLabel(Window, "Footer", "NOVA • READY", UDim2.fromOffset(190, 18), UDim2.new(0, 16, 1, -27), 8, COLORS.Dim, Enum.Font.GothamBold)
-makeLabel(Window, "Version", "v2 UI", UDim2.fromOffset(60, 18), UDim2.new(1, -76, 1, -27), 8, COLORS.Dim, Enum.Font.GothamBold).TextXAlignment = Enum.TextXAlignment.Right
+-- Keep scrolling content sized correctly.
+local function refreshSnipeCanvas()
+    SnipeContent.Size = UDim2.new(1, -8, 0, contentLayout.AbsoluteContentSize.Y + 12)
+end
+contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSnipeCanvas)
+task.defer(refreshSnipeCanvas)
 
-local CollapsibleItems = { Content, Footer }
+-- COLLAPSE / CLOSE
 local function setWindowCollapsed(collapsed)
     windowCollapsed = collapsed
-    for _, item in ipairs(CollapsibleItems) do
-        if item then item.Visible = not collapsed end
-    end
-    Window.Size = collapsed and collapsedWindowSize or normalWindowSize
+    Tabs.Visible = not collapsed
+    ConsolePage.Visible = not collapsed and ConsolePage.Visible
+    SnipePage.Visible = not collapsed and SnipePage.Visible
+    Window.Size = collapsed and COLLAPSED_SIZE or NORMAL_SIZE
     MinimizeButton.Text = collapsed and "+" or "−"
     updateInterfaceScale()
 end
-do
-    local minimizeBusy = false
-    local function toggleMinimize()
-        if minimizeBusy then return end
-        minimizeBusy = true
-        setWindowCollapsed(not windowCollapsed)
-        task.delay(0.12, function() minimizeBusy = false end)
-    end
-    MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
-    MinimizeButton.TouchTap:Connect(toggleMinimize)
+
+local minimizeBusy = false
+local function toggleMinimize()
+    if minimizeBusy then return end
+    minimizeBusy = true
+    setWindowCollapsed(not windowCollapsed)
+    task.delay(0.12, function() minimizeBusy = false end)
 end
+MinimizeButton.Activated:Connect(toggleMinimize)
+
 CloseButton.Activated:Connect(function()
     pcall(function()
         if aceListenConnection then aceListenConnection:Disconnect(); aceListenConnection = nil end
@@ -981,44 +939,33 @@ CloseButton.Activated:Connect(function()
     GUI:Destroy()
 end)
 
--- Keep the first screen focused on the sniping controls.
 activatePage(SnipePage)
 
--- WINDOW DRAGGING: one input path, desktop + touch
- do
+-- WINDOW DRAGGING: header only, never buttons.
+do
     local dragging = false
     local activeInput
     local dragStart
     local startPosition
-    local DRAG_THRESHOLD = UserInputService.TouchEnabled and 10 or 3
 
     Header.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
         local function inside(control)
-            return input.Position.X >= control.AbsolutePosition.X - 8
-                and input.Position.X <= control.AbsolutePosition.X + control.AbsoluteSize.X + 8
-                and input.Position.Y >= control.AbsolutePosition.Y - 8
-                and input.Position.Y <= control.AbsolutePosition.Y + control.AbsoluteSize.Y + 8
+            return input.Position.X >= control.AbsolutePosition.X
+                and input.Position.X <= control.AbsolutePosition.X + control.AbsoluteSize.X
+                and input.Position.Y >= control.AbsolutePosition.Y
+                and input.Position.Y <= control.AbsolutePosition.Y + control.AbsoluteSize.Y
         end
-        if inside(AutoWriteButton) or inside(MinimizeButton) or inside(CloseButton) then
-            return
-        end
-        -- Never start dragging from any clickable button/control in the header.
+        if inside(AutoWriteButton) or inside(MinimizeButton) or inside(CloseButton) then return end
         for _, child in ipairs(Header:GetChildren()) do
-            if child:IsA("GuiButton") and inside(child) then
-                return
-            end
+            if child:IsA("GuiButton") and inside(child) then return end
         end
-
         dragging = true
         activeInput = input
         dragStart = Vector2.new(input.Position.X, input.Position.Y)
         startPosition = Window.Position
-
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End
-                or input.UserInputState == Enum.UserInputState.Cancel then
+            if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
                 dragging = false
                 activeInput = nil
             end
@@ -1027,22 +974,13 @@ activatePage(SnipePage)
 
     UserInputService.InputChanged:Connect(function(input)
         if not dragging or not activeInput then return end
-        local trackedMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1
-            and input.UserInputType == Enum.UserInputType.MouseMovement
-        local trackedTouch = activeInput.UserInputType == Enum.UserInputType.Touch
-            and input == activeInput
-        if not trackedMouse and not trackedTouch then return end
-
+        local mouseMove = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
+        local touchMove = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
+        if not mouseMove and not touchMove then return end
         local current = Vector2.new(input.Position.X, input.Position.Y)
         local delta = current - dragStart
-        if delta.Magnitude < DRAG_THRESHOLD then return end
-
-        Window.Position = UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
+        if delta.Magnitude < 2 then return end
+        Window.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
     end)
 end
 
@@ -1097,34 +1035,6 @@ local function watchBoxForBlankReset(box)
         if not parent then resetPasteCounter(); clearBoxWatchers() end
     end)
 end
-local function col3ToRich(col)
-    if col == COLORS.Green then return CONSOLE_COLORS.Green end
-    if col == COLORS.Red then return CONSOLE_COLORS.Red end
-    if col == COLORS.Text then return CONSOLE_COLORS.Amber end
-    if col == COLORS.White then return CONSOLE_COLORS.Cyan end
-    if col == COLORS.Dim then return CONSOLE_COLORS.Dim end
-    return string.format("rgb(%d,%d,%d)", math.floor(col.R * 255 + 0.5), math.floor(col.G * 255 + 0.5), math.floor(col.B * 255 + 0.5))
-end
-
-function setStatus(msg, col)
-    if not ConsoleOutput or not _enabled then return end
-    if msg == _lastStatusMsg then return end
-    _lastStatusMsg = msg
-    col = col or COLORS.Dim
-    local line = '<font color="' .. CONSOLE_COLORS.Cyan .. '">(NOVA)</font> <font color="' .. col3ToRich(col) .. '">' .. tostring(msg) .. "</font>"
-    if ConsoleOutput.Text == "" then ConsoleOutput.Text = line
-    else ConsoleOutput.Text = ConsoleOutput.Text .. "\n\n" .. line end
-    scrollConsoleToBottom()
-end
-
-function flashCode(code, col)
-    if not code or code == "" or code == "—" then return end
-    setStatus(tostring(code), col or COLORS.White)
-end
-
-local function resetPasteCounter() _capturedParts = {} end
-clearAceCapture = function() _capturedParts = {} end
-
 local function clearBoxWatchers()
     if _boxTextConn then pcall(function() _boxTextConn:Disconnect() end) end
     if _boxAncestryConn then pcall(function() _boxAncestryConn:Disconnect() end) end
