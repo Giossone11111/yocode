@@ -51,8 +51,6 @@ local _lastBox              = nil
 local _autoAccept           = savedConfig.autoSubmit
 local _submitAfter          = savedConfig.submitAfter
 local _capturedParts        = {}
-local _capturedMessages      = {}
-local _currentBatchMessages  = {}
 local _lastWatchedBox       = nil
 local _boxTextConn          = nil
 local _boxAncestryConn      = nil
@@ -71,7 +69,6 @@ local getconns    = getconnections or (debug and debug.getconnections)
 local setupv      = (debug and debug.setupvalue) or setupvalue
 
 local setStatus, flashCode, appendToBox
-local updateMessageTracker, addCapturedMessage, clearCapturedMessages
 local rememberPendingSubmission, clearPendingSubmission, handleRedemptionFeedback
 local clearAceCapture
 local aceListenConnection = nil
@@ -410,6 +407,68 @@ local function makeButton(parent, name, text, size, position, textSize)
     return b
 end
 
+
+-- NOVA MINI TOASTS
+local NotificationGui = Instance.new("ScreenGui")
+NotificationGui.Name = "NovaNotificationsUI"
+NotificationGui.ResetOnSpawn = false
+NotificationGui.IgnoreGuiInset = true
+NotificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+NotificationGui.DisplayOrder = 999999
+NotificationGui.Parent = playerGui
+
+local NotificationHolder = Instance.new("Frame")
+NotificationHolder.AnchorPoint = Vector2.new(1, 1)
+NotificationHolder.Position = UDim2.new(1, -8, 1, -8)
+NotificationHolder.Size = UDim2.fromOffset(230, 190)
+NotificationHolder.BackgroundTransparency = 1
+NotificationHolder.Parent = NotificationGui
+
+local NotificationLayout = Instance.new("UIListLayout")
+NotificationLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+NotificationLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+NotificationLayout.Padding = UDim.new(0, 5)
+NotificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NotificationLayout.Parent = NotificationHolder
+
+local _toastId = 0
+local function novaNotify(title, message, accent)
+    _toastId += 1
+    local toast = Instance.new("Frame")
+    toast.Name = "Toast_" .. _toastId
+    toast.Size = UDim2.fromOffset(220, 46)
+    toast.BackgroundColor3 = COLORS.Window
+    toast.BackgroundTransparency = 0.03
+    toast.BorderSizePixel = 0
+    toast.LayoutOrder = _toastId
+    toast.Parent = NotificationHolder
+    addCorner(toast, 9)
+    addStroke(toast, accent or COLORS.Accent2, 1, 0.15)
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.fromOffset(3, 28)
+    bar.Position = UDim2.fromOffset(6, 9)
+    bar.BackgroundColor3 = accent or COLORS.Accent2
+    bar.BorderSizePixel = 0
+    bar.Parent = toast
+    addCorner(bar, 2)
+
+    local titleLabel = makeLabel(toast, "Title", title, UDim2.new(1, -20, 0, 14), UDim2.fromOffset(16, 5), 8, COLORS.White, Enum.Font.GothamBold)
+    local messageLabel = makeLabel(toast, "Message", message, UDim2.new(1, -20, 0, 19), UDim2.fromOffset(16, 20), 7, COLORS.Dim, Enum.Font.Code)
+    messageLabel.TextTruncate = Enum.TextTruncate.AtEnd
+
+    task.delay(2.8, function()
+        if not toast.Parent then return end
+        local info = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(toast, info, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(titleLabel, info, {TextTransparency = 1}):Play()
+        TweenService:Create(messageLabel, info, {TextTransparency = 1}):Play()
+        TweenService:Create(bar, info, {BackgroundTransparency = 1}):Play()
+        task.wait(0.18)
+        if toast then toast:Destroy() end
+    end)
+end
+
 -- CLEANUP OLD GUIS
 pcall(function()
     for _, name in ipairs({"ACECodeSniperUI", "AutoTypeCodesUI", "ACEPaste", "NovaRedeemerUI"}) do
@@ -429,105 +488,6 @@ GUI.ResetOnSpawn = false
 GUI.IgnoreGuiInset = true
 GUI.DisplayOrder = 999
 if not pcall(function() GUI.Parent = game.CoreGui end) then GUI.Parent = playerGui end
-
-
--- NOVA MINI NOTIFICATIONS
--- Small bottom-right toasts, designed to stay readable on mobile.
-local NotificationGui = Instance.new("ScreenGui")
-NotificationGui.Name = "NovaNotificationsUI"
-NotificationGui.ResetOnSpawn = false
-NotificationGui.IgnoreGuiInset = true
-NotificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-NotificationGui.DisplayOrder = 999999
-NotificationGui.Parent = playerGui
-
-local NotificationHolder = Instance.new("Frame")
-NotificationHolder.Name = "Holder"
-NotificationHolder.AnchorPoint = Vector2.new(1, 1)
-NotificationHolder.Position = UDim2.new(1, -10, 1, -10)
-NotificationHolder.Size = UDim2.fromOffset(245, 220)
-NotificationHolder.BackgroundTransparency = 1
-NotificationHolder.Parent = NotificationGui
-
-local notificationLayout = Instance.new("UIListLayout")
-notificationLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-notificationLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-notificationLayout.Padding = UDim.new(0, 6)
-notificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
-notificationLayout.Parent = NotificationHolder
-
-local notificationCounter = 0
-
-local function novaNotify(title, message, accent)
-    notificationCounter += 1
-
-    local toast = Instance.new("Frame")
-    toast.Name = "Toast_" .. tostring(notificationCounter)
-    toast.Size = UDim2.fromOffset(235, 52)
-    toast.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
-    toast.BackgroundTransparency = 0.04
-    toast.BorderSizePixel = 0
-    toast.LayoutOrder = notificationCounter
-    toast.Parent = NotificationHolder
-    addCorner(toast, 10)
-    local stroke = addStroke(toast, accent or Color3.fromRGB(82, 207, 255), 1, 0.18)
-
-    local bar = Instance.new("Frame")
-    bar.Size = UDim2.fromOffset(3, 30)
-    bar.Position = UDim2.fromOffset(7, 11)
-    bar.BackgroundColor3 = accent or Color3.fromRGB(82, 207, 255)
-    bar.BorderSizePixel = 0
-    bar.Parent = toast
-    addCorner(bar, 2)
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -27, 0, 15)
-    titleLabel.Position = UDim2.fromOffset(17, 6)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = tostring(title or "NOVA")
-    titleLabel.TextColor3 = Color3.fromRGB(245, 247, 252)
-    titleLabel.TextSize = 9
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    titleLabel.Parent = toast
-
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Size = UDim2.new(1, -27, 0, 24)
-    messageLabel.Position = UDim2.fromOffset(17, 22)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.Text = tostring(message or "")
-    messageLabel.TextColor3 = Color3.fromRGB(145, 153, 174)
-    messageLabel.TextSize = 8
-    messageLabel.Font = Enum.Font.Code
-    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
-    messageLabel.TextYAlignment = Enum.TextYAlignment.Top
-    messageLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    messageLabel.Parent = toast
-
-    toast.BackgroundTransparency = 1
-    titleLabel.TextTransparency = 1
-    messageLabel.TextTransparency = 1
-    bar.BackgroundTransparency = 1
-
-    local enter = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(toast, enter, {BackgroundTransparency = 0.04}):Play()
-    TweenService:Create(titleLabel, enter, {TextTransparency = 0}):Play()
-    TweenService:Create(messageLabel, enter, {TextTransparency = 0}):Play()
-    TweenService:Create(bar, enter, {BackgroundTransparency = 0}):Play()
-
-    task.delay(3.0, function()
-        if not toast.Parent then return end
-        local exit = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-        TweenService:Create(toast, exit, {BackgroundTransparency = 1}):Play()
-        TweenService:Create(titleLabel, exit, {TextTransparency = 1}):Play()
-        TweenService:Create(messageLabel, exit, {TextTransparency = 1}):Play()
-        local barTween = TweenService:Create(bar, exit, {BackgroundTransparency = 1})
-        barTween:Play()
-        barTween.Completed:Wait()
-        if toast then toast:Destroy() end
-    end)
-end
 
 -- Compact by default: designed for small phone screens.
 local NORMAL_SIZE = UDim2.fromOffset(300, 340)
@@ -888,31 +848,30 @@ end
 AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
 -- MESSAGE TRACKER
-local MessageCard = makeSection(116)
+local _messageHistory = {}
+local _currentBatch = {}
+
+local MessageCard = makeSection(126)
 MessageCard.LayoutOrder = 3
 
 local MsgHeader = Instance.new("Frame")
-MsgHeader.Size = UDim2.new(1, -20, 0, 28)
+MsgHeader.Size = UDim2.new(1, -20, 0, 26)
 MsgHeader.Position = UDim2.fromOffset(10, 7)
 MsgHeader.BackgroundTransparency = 1
 MsgHeader.Parent = MessageCard
 
-local MsgTitle = makeLabel(MsgHeader, "Title", "MSG", UDim2.fromOffset(70, 20), UDim2.fromOffset(0, 0), 10, COLORS.White, Enum.Font.GothamBold)
+makeLabel(MsgHeader, "Title", "MSG", UDim2.fromOffset(38, 20), UDim2.fromOffset(0, 0), 10, COLORS.White, Enum.Font.GothamBlack)
+local MsgCount = makeLabel(MsgHeader, "Count", "0/" .. tostring(_submitAfter), UDim2.fromOffset(55, 20), UDim2.fromOffset(40, 0), 10, COLORS.Accent2, Enum.Font.GothamBlack)
 
-local MsgCount = makeLabel(MsgHeader, "Count", "0/" .. tostring(_submitAfter), UDim2.fromOffset(55, 20), UDim2.fromOffset(55, 0), 10, COLORS.Accent2, Enum.Font.GothamBlack)
-MsgCount.TextXAlignment = Enum.TextXAlignment.Left
+local MessageClear = makeButton(MsgHeader, "Clear", "CLEAR", UDim2.fromOffset(52, 22), UDim2.new(1, -52, 0, 0), 7)
 
-local MessageClear = makeButton(MsgHeader, "ClearMessages", "CLEAR", UDim2.fromOffset(52, 23), UDim2.new(1, -52, 0, -1), 7)
-MessageClear.BackgroundColor3 = COLORS.Control
-MessageClear.TextColor3 = COLORS.Dim
-
-local MessagesTitle = makeLabel(MessageCard, "MessagesTitle", "MESSAGES", UDim2.fromOffset(100, 15), UDim2.fromOffset(10, 34), 7, COLORS.Dim, Enum.Font.GothamBold)
+local MessagesTitle = makeLabel(MessageCard, "MessagesTitle", "MESSAGES", UDim2.fromOffset(100, 14), UDim2.fromOffset(10, 31), 7, COLORS.Dim, Enum.Font.GothamBold)
 
 local MessagesScroll = Instance.new("ScrollingFrame")
-MessagesScroll.Name = "MessagesScroll"
-MessagesScroll.Size = UDim2.new(1, -20, 0, 66)
-MessagesScroll.Position = UDim2.fromOffset(10, 48)
-MessagesScroll.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
+MessagesScroll.Name = "Messages"
+MessagesScroll.Size = UDim2.new(1, -20, 0, 76)
+MessagesScroll.Position = UDim2.fromOffset(10, 47)
+MessagesScroll.BackgroundColor3 = Color3.fromRGB(7, 8, 11)
 MessagesScroll.BorderSizePixel = 0
 MessagesScroll.ClipsDescendants = true
 MessagesScroll.Active = true
@@ -927,34 +886,27 @@ addCorner(MessagesScroll, 9)
 addStroke(MessagesScroll, COLORS.Border, 1, 0.3)
 
 local MessagesList = Instance.new("Frame")
-MessagesList.Name = "MessagesList"
-MessagesList.Size = UDim2.new(1, -12, 0, 1)
-MessagesList.Position = UDim2.fromOffset(6, 5)
+MessagesList.Size = UDim2.new(1, -10, 0, 1)
+MessagesList.Position = UDim2.fromOffset(5, 5)
 MessagesList.BackgroundTransparency = 1
 MessagesList.Parent = MessagesScroll
 
 local MessagesLayout = Instance.new("UIListLayout")
-MessagesLayout.Padding = UDim.new(0, 4)
+MessagesLayout.Padding = UDim.new(0, 3)
 MessagesLayout.SortOrder = Enum.SortOrder.LayoutOrder
 MessagesLayout.Parent = MessagesList
-
-local function escapeRichText(value)
-    value = tostring(value or "")
-    return value:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-end
 
 local function redrawMessages()
     for _, child in ipairs(MessagesList:GetChildren()) do
         if child:IsA("TextLabel") then child:Destroy() end
     end
-
-    for i, msg in ipairs(_capturedMessages) do
+    for i, msg in ipairs(_messageHistory) do
         local line = Instance.new("TextLabel")
-        line.Name = "Message_" .. tostring(i)
-        line.Size = UDim2.new(1, -2, 0, 18)
+        line.Name = "Message_" .. i
+        line.Size = UDim2.new(1, -2, 0, 17)
         line.BackgroundTransparency = 1
-        line.Text = '<font color="' .. CONSOLE_COLORS.Cyan .. '">•</font> <font color="' .. CONSOLE_COLORS.Text .. '">' .. escapeRichText(msg) .. '</font>'
-        line.RichText = true
+        line.Text = "•  " .. tostring(msg)
+        line.TextColor3 = COLORS.Text
         line.TextSize = 8
         line.Font = Enum.Font.Code
         line.TextXAlignment = Enum.TextXAlignment.Left
@@ -963,47 +915,43 @@ local function redrawMessages()
         line.LayoutOrder = i
         line.Parent = MessagesList
     end
-
-    MsgCount.Text = tostring(#_currentBatchMessages) .. "/" .. tostring(_submitAfter)
-    MsgCount.TextColor3 = (#_currentBatchMessages >= _submitAfter) and COLORS.Green or COLORS.Accent2
-    MessagesScroll.CanvasPosition = Vector2.new(0, math.max(0, MessagesScroll.AbsoluteCanvasSize.Y - MessagesScroll.AbsoluteWindowSize.Y))
+    MsgCount.Text = tostring(#_currentBatch) .. "/" .. tostring(_submitAfter)
+    MsgCount.TextColor3 = (#_currentBatch >= _submitAfter) and COLORS.Green or COLORS.Accent2
+    task.defer(function()
+        MessagesScroll.CanvasPosition = Vector2.new(0, math.max(0, MessagesScroll.AbsoluteCanvasSize.Y - MessagesScroll.AbsoluteWindowSize.Y))
+    end)
 end
 
-updateMessageTracker = function()
-    redrawMessages()
-end
-
-addCapturedMessage = function(message)
+local function addCapturedMessage(message)
     if not message or tostring(message) == "" then return end
     local value = tostring(message)
-    _capturedMessages[#_capturedMessages + 1] = value
-    _currentBatchMessages[#_currentBatchMessages + 1] = value
+    _messageHistory[#_messageHistory + 1] = value
+    _currentBatch[#_currentBatch + 1] = value
     redrawMessages()
+    novaNotify("MESSAGE CAPTURED", value, COLORS.Accent2)
 end
 
-clearCapturedMessages = function()
-    -- Remove only the messages belonging to the current, not-yet-submitted code.
-    local removeCount = #_currentBatchMessages
+local function clearCurrentMessages()
+    local removeCount = #_currentBatch
     for _ = 1, removeCount do
-        if #_capturedMessages > 0 then
-            table.remove(_capturedMessages, #_capturedMessages)
+        if #_messageHistory > 0 then
+            table.remove(_messageHistory, #_messageHistory)
         end
     end
-    _currentBatchMessages = {}
+    _currentBatch = {}
     _capturedParts = {}
-    clearPendingSubmission()
     redrawMessages()
-    setStatus("Capture cleared", COLORS.Dim)
 end
 
 MessageClear.Activated:Connect(function()
-    clearCapturedMessages()
-    novaNotify("MESSAGES CLEARED", "current capture discarded", COLORS.Amber)
+    clearCurrentMessages()
+    clearAceCapture()
+    novaNotify("MESSAGES CLEARED", "current capture removed", COLORS.Amber)
 end)
 
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = (key == "Auto submit") and 5 or 6
+    row.LayoutOrder = (key == "Auto submit") and 4 or 5
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -1038,7 +986,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 4
+Delay.LayoutOrder = 6
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1059,7 +1007,8 @@ Minus.Activated:Connect(function()
     _submitAfter = math.max(1, _submitAfter - 1)
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
-    clearAceCapture()
+    _currentBatch = {}
+    _capturedParts = {}
     redrawMessages()
     saveConfig()
 end)
@@ -1067,13 +1016,14 @@ Plus.Activated:Connect(function()
     _submitAfter += 1
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
-    clearAceCapture()
+    _currentBatch = {}
+    _capturedParts = {}
     redrawMessages()
     saveConfig()
 end)
 
 local ScaleCard = makeSection(62)
-ScaleCard.LayoutOrder = 8
+ScaleCard.LayoutOrder = 7
 makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1113,7 +1063,7 @@ end)
 refreshScaleText()
 
 local Tip = makeSection(58)
-Tip.LayoutOrder = 9
+Tip.LayoutOrder = 8
 makeLabel(Tip, "Title", "NOVA TIP", UDim2.fromOffset(100, 17), UDim2.fromOffset(12, 7), 8, COLORS.Accent2, Enum.Font.GothamBold)
 makeLabel(Tip, "Text", "Scroll this panel on mobile to reach every control.", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 25), 8, COLORS.Text, Enum.Font.GothamMedium)
 
@@ -1168,7 +1118,6 @@ CloseButton.Activated:Connect(function()
             getgenv().ACECodeSniperNotifyConnection = nil
         end
     end)
-    if NotificationGui then NotificationGui:Destroy() end
     GUI:Destroy()
 end)
 
@@ -1372,15 +1321,7 @@ handleRedemptionFeedback = function(text, feedbackObject)
     if restored then
         setStatus("Invalid - repasted: " .. previousText, COLORS.Text)
         flashCode(previousText, COLORS.Red)
-        local removeCount = #_currentBatchMessages
-        for _ = 1, removeCount do
-            if #_capturedMessages > 0 then
-                table.remove(_capturedMessages, #_capturedMessages)
-            end
-        end
-        _currentBatchMessages = {}
-        _capturedParts = {}
-        redrawMessages()
+        clearCurrentMessages()
         novaNotify("INVALID CODE", "old capture cleared", COLORS.Red)
     end
 end
@@ -1425,7 +1366,7 @@ function appendToBox(text)
             if ok then
                 setStatus("Redeemed: " .. combinedCode, COLORS.Green)
                 novaNotify("CODE REDEEMED!", combinedCode, COLORS.Green)
-                _currentBatchMessages = {}
+                _currentBatch = {}
                 redrawMessages()
             else
                 local restored = restoreRejectedText(box, combinedCode)
@@ -1501,7 +1442,6 @@ local function onAceAnnouncement(...)
     if text == "" then return end
     setStatus(text, COLORS.White)
     addCapturedMessage(text)
-    novaNotify("MESSAGE CAPTURED", text, COLORS.Accent2)
     if text:find("%s") then return end
     
     for _, word in ipairs(aceTokenize(text)) do
