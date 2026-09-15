@@ -3,6 +3,7 @@ local Players           = cloneref(game:GetService("Players"))
 local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
 local RunService        = cloneref(game:GetService("RunService"))
 local UserInputService  = cloneref(game:GetService("UserInputService"))
+local TweenService       = cloneref(game:GetService("TweenService"))
 local HttpService       = cloneref(game:GetService("HttpService"))
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -426,6 +427,105 @@ GUI.IgnoreGuiInset = true
 GUI.DisplayOrder = 999
 if not pcall(function() GUI.Parent = game.CoreGui end) then GUI.Parent = playerGui end
 
+
+-- NOVA MINI NOTIFICATIONS
+-- Small bottom-right toasts, designed to stay readable on mobile.
+local NotificationGui = Instance.new("ScreenGui")
+NotificationGui.Name = "NovaNotificationsUI"
+NotificationGui.ResetOnSpawn = false
+NotificationGui.IgnoreGuiInset = true
+NotificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+NotificationGui.DisplayOrder = 999999
+NotificationGui.Parent = playerGui
+
+local NotificationHolder = Instance.new("Frame")
+NotificationHolder.Name = "Holder"
+NotificationHolder.AnchorPoint = Vector2.new(1, 1)
+NotificationHolder.Position = UDim2.new(1, -10, 1, -10)
+NotificationHolder.Size = UDim2.fromOffset(245, 220)
+NotificationHolder.BackgroundTransparency = 1
+NotificationHolder.Parent = NotificationGui
+
+local notificationLayout = Instance.new("UIListLayout")
+notificationLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+notificationLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+notificationLayout.Padding = UDim.new(0, 6)
+notificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
+notificationLayout.Parent = NotificationHolder
+
+local notificationCounter = 0
+
+local function novaNotify(title, message, accent)
+    notificationCounter += 1
+
+    local toast = Instance.new("Frame")
+    toast.Name = "Toast_" .. tostring(notificationCounter)
+    toast.Size = UDim2.fromOffset(235, 52)
+    toast.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
+    toast.BackgroundTransparency = 0.04
+    toast.BorderSizePixel = 0
+    toast.LayoutOrder = notificationCounter
+    toast.Parent = NotificationHolder
+    addCorner(toast, 10)
+    local stroke = addStroke(toast, accent or Color3.fromRGB(82, 207, 255), 1, 0.18)
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.fromOffset(3, 30)
+    bar.Position = UDim2.fromOffset(7, 11)
+    bar.BackgroundColor3 = accent or Color3.fromRGB(82, 207, 255)
+    bar.BorderSizePixel = 0
+    bar.Parent = toast
+    addCorner(bar, 2)
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -27, 0, 15)
+    titleLabel.Position = UDim2.fromOffset(17, 6)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = tostring(title or "NOVA")
+    titleLabel.TextColor3 = Color3.fromRGB(245, 247, 252)
+    titleLabel.TextSize = 9
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    titleLabel.Parent = toast
+
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -27, 0, 24)
+    messageLabel.Position = UDim2.fromOffset(17, 22)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = tostring(message or "")
+    messageLabel.TextColor3 = Color3.fromRGB(145, 153, 174)
+    messageLabel.TextSize = 8
+    messageLabel.Font = Enum.Font.Code
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextYAlignment = Enum.TextYAlignment.Top
+    messageLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    messageLabel.Parent = toast
+
+    toast.BackgroundTransparency = 1
+    titleLabel.TextTransparency = 1
+    messageLabel.TextTransparency = 1
+    bar.BackgroundTransparency = 1
+
+    local enter = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(toast, enter, {BackgroundTransparency = 0.04}):Play()
+    TweenService:Create(titleLabel, enter, {TextTransparency = 0}):Play()
+    TweenService:Create(messageLabel, enter, {TextTransparency = 0}):Play()
+    TweenService:Create(bar, enter, {BackgroundTransparency = 0}):Play()
+
+    task.delay(3.0, function()
+        if not toast.Parent then return end
+        local exit = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(toast, exit, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(titleLabel, exit, {TextTransparency = 1}):Play()
+        TweenService:Create(messageLabel, exit, {TextTransparency = 1}):Play()
+        local barTween = TweenService:Create(bar, exit, {BackgroundTransparency = 1})
+        barTween:Play()
+        barTween.Completed:Wait()
+        if toast then toast:Destroy() end
+    end)
+end
+
 -- Compact by default: designed for small phone screens.
 local NORMAL_SIZE = UDim2.fromOffset(300, 340)
 local COLLAPSED_SIZE = UDim2.fromOffset(300, 54)
@@ -675,6 +775,7 @@ ClearConsole.Activated:Connect(function()
         and '<font color="' .. CONSOLE_COLORS.Green .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner online</font>'
         or '<font color="' .. CONSOLE_COLORS.Red .. '">●</font> <font color="' .. CONSOLE_COLORS.Dim .. '">scanner paused</font>'
     scrollConsoleToBottom()
+    novaNotify("LIVE CONSOLE CLEARED", "console log cleared", COLORS.Accent2)
 end)
 
 updateConsoleCanvas = function()
@@ -948,6 +1049,7 @@ CloseButton.Activated:Connect(function()
             getgenv().ACECodeSniperNotifyConnection = nil
         end
     end)
+    if NotificationGui then NotificationGui:Destroy() end
     GUI:Destroy()
 end)
 
@@ -1193,6 +1295,7 @@ function appendToBox(text)
             
             if ok then
                 setStatus("Redeemed: " .. combinedCode, COLORS.Green)
+                novaNotify("CODE REDEEMED!", combinedCode, COLORS.Green)
             else
                 local restored = restoreRejectedText(box, combinedCode)
                 clearPendingSubmission()
@@ -1266,6 +1369,7 @@ local function onAceAnnouncement(...)
     text = text:match("^%s*(.-)%s*$") or ""
     if text == "" then return end
     setStatus(text, COLORS.White)
+    novaNotify("MESSAGE CAPTURED", text, COLORS.Accent2)
     if text:find("%s") then return end
     
     for _, word in ipairs(aceTokenize(text)) do
@@ -1309,6 +1413,7 @@ if getgenv then
             pcall(function() getgenv().ACECodeSniperNotifyConnection:Disconnect() end)
             getgenv().ACECodeSniperNotifyConnection = nil
         end
+        if NotificationGui then pcall(function() NotificationGui:Destroy() end) end
         if GUI then GUI:Destroy() end
     end
 end
