@@ -248,7 +248,7 @@ local function typeAndSubmitCode(code)
 
             if box then
                 pcall(function() box.Text = code end)
-                task.wait(0.05)
+                task.wait(0.01)
                 if submitBtn then clickButton(submitBtn) end
                 fireBoxFocusLost(box)
                 return true, "submitted via PlayerGui.Codes"
@@ -291,7 +291,7 @@ local function typeAndSubmitCode(code)
     if not box then return false, "no codebox visible" end
 
     pcall(function() box.Text = code end)
-    task.wait(0.05)
+    task.wait(0.01)
 
     local redeemBtn = nil
     local searchNames = {"submit","redeem","claim","confirm","enter","send","apply","ok","use","go","check"}
