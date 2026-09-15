@@ -1003,7 +1003,7 @@ end)
 
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = (key == "Auto submit") and 4 or 5
+    row.LayoutOrder = (key == "Auto submit") and 5 or 6
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -1038,7 +1038,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 6
+Delay.LayoutOrder = 4
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1060,7 +1060,7 @@ Minus.Activated:Connect(function()
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
     clearAceCapture()
-    clearCapturedMessages()
+    redrawMessages()
     saveConfig()
 end)
 Plus.Activated:Connect(function()
@@ -1068,11 +1068,12 @@ Plus.Activated:Connect(function()
     Count.Text = tostring(_submitAfter)
     savedConfig.submitAfter = _submitAfter
     clearAceCapture()
+    redrawMessages()
     saveConfig()
 end)
 
 local ScaleCard = makeSection(62)
-ScaleCard.LayoutOrder = 7
+ScaleCard.LayoutOrder = 8
 makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1112,7 +1113,7 @@ end)
 refreshScaleText()
 
 local Tip = makeSection(58)
-Tip.LayoutOrder = 8
+Tip.LayoutOrder = 9
 makeLabel(Tip, "Title", "NOVA TIP", UDim2.fromOffset(100, 17), UDim2.fromOffset(12, 7), 8, COLORS.Accent2, Enum.Font.GothamBold)
 makeLabel(Tip, "Text", "Scroll this panel on mobile to reach every control.", UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 25), 8, COLORS.Text, Enum.Font.GothamMedium)
 
@@ -1392,7 +1393,6 @@ function appendToBox(text)
     end
     local box = aceCodeBox()
     _capturedParts[#_capturedParts + 1] = text
-    addCapturedMessage(text)
     local combinedCode = table.concat(_capturedParts)
     local capturedCount = #_capturedParts
 
@@ -1500,6 +1500,7 @@ local function onAceAnnouncement(...)
     text = text:match("^%s*(.-)%s*$") or ""
     if text == "" then return end
     setStatus(text, COLORS.White)
+    addCapturedMessage(text)
     novaNotify("MESSAGE CAPTURED", text, COLORS.Accent2)
     if text:find("%s") then return end
     
