@@ -460,7 +460,8 @@ local function updateInterfaceScale()
         return
     end
     local viewport = camera.ViewportSize
-    local fit = math.min((viewport.X - 12) / 300, (viewport.Y - 12) / 340)
+    local baseHeight = windowCollapsed and 54 or 340
+    local fit = math.min((viewport.X - 12) / 300, (viewport.Y - 12) / baseHeight)
     if UserInputService.TouchEnabled then
         InterfaceScale.Scale = math.max(0.5, math.min(selectedScale, fit))
     else
@@ -492,6 +493,7 @@ Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 54)
 Header.BackgroundTransparency = 1
 Header.Active = true
+Header.Selectable = false
 Header.ZIndex = 5
 Header.Parent = Window
 
@@ -516,6 +518,17 @@ addCorner(BrandDot, 4)
 
 makeLabel(Header, "Title", "NOVA", UDim2.fromOffset(100, 18), UDim2.fromOffset(54, 7), 14, COLORS.White, Enum.Font.GothamBlack).ZIndex = 6
 makeLabel(Header, "Subtitle", "REDEEMER  •  FAST", UDim2.fromOffset(125, 15), UDim2.fromOffset(54, 26), 8, COLORS.Dim, Enum.Font.GothamBold).ZIndex = 6
+
+-- Header actions: only minimize and close. The SNIPE toggle lives inside SNIPE.
+local MinimizeButton = makeButton(Header, "Minimize", "−", UDim2.fromOffset(42, 36), UDim2.new(1, -90, 0, 9), 17)
+MinimizeButton.BackgroundColor3 = COLORS.Surface2
+MinimizeButton.TextColor3 = COLORS.White
+MinimizeButton.ZIndex = 30
+
+local CloseButton = makeButton(Header, "Close", "×", UDim2.fromOffset(42, 36), UDim2.new(1, -46, 0, 9), 18)
+CloseButton.BackgroundColor3 = COLORS.Surface2
+CloseButton.TextColor3 = COLORS.Red
+CloseButton.ZIndex = 30
 
 local Console, ConsoleOutput, updateConsoleCanvas
 local autoWriteEnabled = _enabled
@@ -605,7 +618,7 @@ ConsoleFrame.Parent = ConsolePage
 addCorner(ConsoleFrame, 13)
 addStroke(ConsoleFrame, COLORS.Border, 1, 0.2)
 
-local ConsoleTitle = makeLabel(ConsoleFrame, "Title", "LIVE CONSOLE", UDim2.fromOffset(150, 18), UDim2.fromOffset(12, 8), 11, COLORS.White, Enum.Font.GothamBold)
+local ConsoleTitle = makeLabel(ConsoleFrame, "Title", "CONSOLE", UDim2.fromOffset(150, 18), UDim2.fromOffset(12, 8), 11, COLORS.White, Enum.Font.GothamBold)
 ConsoleTitle.ZIndex = 3
 local ConsoleHint = makeLabel(ConsoleFrame, "Hint", "events • codes • status", UDim2.fromOffset(160, 14), UDim2.fromOffset(12, 25), 7, COLORS.Dim, Enum.Font.GothamMedium)
 ConsoleHint.ZIndex = 3
@@ -655,7 +668,7 @@ ConsoleFooter.Position = UDim2.new(0, 10, 1, -34)
 ConsoleFooter.BackgroundTransparency = 1
 ConsoleFooter.Parent = ConsoleFrame
 
-local ConsoleFooterLabel = makeLabel(ConsoleFooter, "Hint", "LIVE LOG", UDim2.fromOffset(100, 18), UDim2.fromOffset(2, 4), 7, COLORS.Dim, Enum.Font.GothamBold)
+local ConsoleFooterLabel = makeLabel(ConsoleFooter, "Hint", "LOG", UDim2.fromOffset(100, 18), UDim2.fromOffset(2, 4), 7, COLORS.Dim, Enum.Font.GothamBold)
 local ClearConsole = makeButton(ConsoleFooter, "ClearConsole", "CLEAR", UDim2.fromOffset(58, 23), UDim2.new(1, -58, 0, 0), 7)
 ClearConsole.Activated:Connect(function()
     ConsoleOutput.Text = autoWriteEnabled
@@ -892,14 +905,30 @@ contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSni
 task.defer(refreshSnipeCanvas)
 
 -- COLLAPSE / CLOSE
+local currentPage = SnipePage
+
 local function setWindowCollapsed(collapsed)
     windowCollapsed = collapsed
     Tabs.Visible = not collapsed
-    ConsolePage.Visible = not collapsed and ConsolePage.Visible
-    SnipePage.Visible = not collapsed and SnipePage.Visible
+    ConsolePage.Visible = not collapsed and currentPage == ConsolePage
+    SnipePage.Visible = not collapsed and currentPage == SnipePage
     Window.Size = collapsed and COLLAPSED_SIZE or NORMAL_SIZE
     MinimizeButton.Text = collapsed and "+" or "−"
     updateInterfaceScale()
+end
+
+-- Keep the selected tab remembered while the window is collapsed.
+local originalActivatePage = activatePage
+activatePage = function(page)
+    currentPage = page
+    if windowCollapsed then
+        ConsolePage.Visible = false
+        SnipePage.Visible = false
+        setTabVisual(ConsoleTab, page == ConsolePage)
+        setTabVisual(SnipeTab, page == SnipePage)
+        return
+    end
+    originalActivatePage(page)
 end
 
 local minimizeBusy = false
