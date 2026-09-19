@@ -13,10 +13,14 @@ if getgenv and getgenv().StopAura then pcall(getgenv().StopAura) end
 -- CONFIGURATION SYSTEM --
 local CONFIG_FILE = "ace_code_sniper_auto_redeem_test_config.json"
 local savedConfig = {
-    codeSniper = true,
+    codeSniper = false,
     autoSubmit = true,
     submitAfter = 3,
 }
+
+local triggerMode = true
+local triggerArmed = false
+local triggerPhrases = {"use code", "the code is"}
 pcall(function()
     if type(isfile) == "function" and type(readfile) == "function"
     and isfile(CONFIG_FILE) then
@@ -1362,6 +1366,9 @@ function appendToBox(text)
                 novaNotify("CODE REDEEMED!", combinedCode, COLORS.Green)
                 _currentBatch = {}
                 redrawMessages()
+                if triggerMode then
+                    disarmCodeSniper()
+                end
             else
                 local restored = restoreRejectedText(box, combinedCode)
                 clearPendingSubmission()
@@ -1430,12 +1437,53 @@ local function aceTokenize(text)
 end
 
 local aceCollectBuffer = {}
+local function normalizeTriggerText(value)
+    value = tostring(value or ""):lower()
+    value = value:gsub("[%p]", " ")
+    value = value:gsub("%s+", " ")
+    return value:match("^%s*(.-)%s*$") or ""
+end
+
+local function hasTriggerPhrase(value)
+    local normalized = normalizeTriggerText(value)
+    for _, phrase in ipairs(triggerPhrases) do
+        if normalized:find(phrase, 1, true) then
+            return true, phrase
+        end
+    end
+    return false, nil
+end
+
+local function armCodeSniper()
+    triggerArmed = true
+    _codeSniper = true
+    setStatus("Trigger detected - sniper ON", COLORS.Green)
+    novaNotify("SNIPE ARMED", "waiting for code", COLORS.Green)
+end
+
+local function disarmCodeSniper()
+    triggerArmed = false
+    _codeSniper = false
+    clearAceCapture()
+    setStatus("Code redeemed - sniper OFF", COLORS.White)
+    novaNotify("SNIPE OFF", "waiting for next trigger", COLORS.Amber)
+end
+
 local function onAceAnnouncement(...)
     local text = aceStripRich(tostring((...) or ""))
     text = text:match("^%s*(.-)%s*$") or ""
     if text == "" then return end
+
+    local matchedTrigger, matchedPhrase = hasTriggerPhrase(text)
+    if triggerMode and not triggerArmed and matchedTrigger then
+        armCodeSniper()
+        setStatus("Trigger: " .. matchedPhrase, COLORS.Accent2)
+        return
+    end
+
     setStatus(text, COLORS.White)
     addCapturedMessage(text)
+    if not _codeSniper then return end
     if text:find("%s") then return end
     
     for _, word in ipairs(aceTokenize(text)) do
