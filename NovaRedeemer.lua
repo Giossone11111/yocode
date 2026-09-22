@@ -20,7 +20,9 @@ local savedConfig = {
 
 local triggerMode = true
 local triggerArmed = false
-local triggerPhrases = {"use code", "the code is"}
+local triggerPhrases = {"use code", "the code is", "use this code", "code is", "redeem code"}
+local _codeSniper = false
+local _retypeInvalid = false
 pcall(function()
     if type(isfile) == "function" and type(readfile) == "function"
     and isfile(CONFIG_FILE) then
@@ -68,7 +70,7 @@ local getupvalues = (debug and debug.getupvalues) or getupvalues
 local getconns    = getconnections or (debug and debug.getconnections)
 local setupv      = (debug and debug.setupvalue) or setupvalue
 
-local setStatus, flashCode, appendToBox
+local setStatus, flashCode, appendToBox, disarmCodeSniper
 local rememberPendingSubmission, clearPendingSubmission, handleRedemptionFeedback
 local clearAceCapture
 local aceListenConnection = nil
@@ -1397,22 +1399,39 @@ playerGui.DescendantAdded:Connect(function(obj)
     watchRedemptionFeedbackObject(obj)
 end)
 
--- ANNOUNCEMENT NOTIFICATION LISTENER --
-local function resolveNotifyRemote()
-    if _G.PhiNotifyRemote then return _G.PhiNotifyRemote end
-    local Net = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net")
+-- ANNOUNCEMENT / TRIGGER LISTENER -----------------------------------------
+local function resolveNotifyRemotes()
+    local remotes = {}
+    local seenRemotes = {}
+    local function addRemote(remote)
+        if remote and remote:IsA("RemoteEvent") and not seenRemotes[remote] then
+            seenRemotes[remote] = true
+            remotes[#remotes + 1] = remote
+        end
+    end
+
+    if _G.PhiNotifyRemote then addRemote(_G.PhiNotifyRemote) end
+
+    local packages = ReplicatedStorage:FindFirstChild("Packages")
+    local net = packages and packages:FindFirstChild("Net")
     local getinfo = debug and (debug.getinfo or debug.info)
-    if getgc and getinfo and getconnections then
-        for _, d in ipairs(Net:GetDescendants()) do
+
+    -- First choice: the same RemoteEvent used by the game's notification controller.
+    if net and getconns and getinfo then
+        for _, d in ipairs(net:GetDescendants()) do
             if d:IsA("RemoteEvent") then
-                local ok, cs = pcall(getconnections, d.OnClientEvent)
-                if ok then
+                local ok, cs = pcall(getconns, d.OnClientEvent)
+                if ok and type(cs) == "table" then
                     for _, c in ipairs(cs) do
-                        local f, fn = pcall(function() return c.Function end)
-                        if f and type(fn) == "function" then
-                            local i, info = pcall(getinfo, fn)
-                            if i and tostring(info.short_src or info.source or ""):find("NotificationController", 1, true) then
-                                return d
+                        local fn = nil
+                        pcall(function() fn = c.Function end)
+                        if type(fn) == "function" then
+                            local infoOk, info = pcall(getinfo, fn)
+                            local src = infoOk and tostring(info.short_src or info.source or "") or ""
+                            if src:lower():find("notificationcontroller", 1, true)
+                                or src:lower():find("notification", 1, true) then
+                                addRemote(d)
+                                break
                             end
                         end
                     end
@@ -1420,7 +1439,24 @@ local function resolveNotifyRemote()
             end
         end
     end
-    return nil
+
+    -- Fallback: notification/announcement named remotes. This fixes the case
+    -- where the controller connection cannot be inspected by the executor.
+    if net then
+        for _, d in ipairs(net:GetDescendants()) do
+            if d:IsA("RemoteEvent") then
+                local n = d.Name:lower()
+                if n:find("notif", 1, true)
+                    or n:find("announce", 1, true)
+                    or n:find("message", 1, true)
+                    or n:find("toast", 1, true) then
+                    addRemote(d)
+                end
+            end
+        end
+    end
+
+    return remotes
 end
 
 local function aceStripRich(text)
@@ -1428,17 +1464,8 @@ local function aceStripRich(text)
     return (text:gsub("<[^>]->", ""))
 end
 
-local function aceTokenize(text)
-    local words = {}
-    for word in text:gmatch("[%w_]+") do
-        words[#words + 1] = word
-    end
-    return words
-end
-
-local aceCollectBuffer = {}
 local function normalizeTriggerText(value)
-    value = tostring(value or ""):lower()
+    value = aceStripRich(tostring(value or "")):lower()
     value = value:gsub("[%p]", " ")
     value = value:gsub("%s+", " ")
     return value:match("^%s*(.-)%s*$") or ""
@@ -1447,74 +1474,121 @@ end
 local function hasTriggerPhrase(value)
     local normalized = normalizeTriggerText(value)
     for _, phrase in ipairs(triggerPhrases) do
-        if normalized:find(phrase, 1, true) then
+        if normalized:find(normalizeTriggerText(phrase), 1, true) then
             return true, phrase
         end
     end
     return false, nil
 end
 
-local function armCodeSniper()
+local function armCodeSniper(phrase)
     triggerArmed = true
     _codeSniper = true
-    setStatus("Trigger detected - sniper ON", COLORS.Green)
-    novaNotify("SNIPE ARMED", "waiting for code", COLORS.Green)
+    aceCollectBuffer = {}
+    _capturedParts = {}
+    _lastStatusMsg = nil
+    setStatus("Trigger detected: " .. tostring(phrase or "use code"), COLORS.Green)
+    -- The trigger gets its own notification, just like a successful redeem.
+    novaNotify("TRIGGER DETECTED!", tostring(phrase or "use code"), COLORS.Green)
 end
 
-local function disarmCodeSniper()
+disarmCodeSniper = function()
     triggerArmed = false
     _codeSniper = false
+    aceCollectBuffer = {}
     clearAceCapture()
     setStatus("Code redeemed - sniper OFF", COLORS.White)
     novaNotify("SNIPE OFF", "waiting for next trigger", COLORS.Amber)
 end
 
-local function onAceAnnouncement(...)
-    local text = aceStripRich(tostring((...) or ""))
-    text = text:match("^%s*(.-)%s*$") or ""
-    if text == "" then return end
-
-    local matchedTrigger, matchedPhrase = hasTriggerPhrase(text)
-    if triggerMode and not triggerArmed and matchedTrigger then
-        armCodeSniper()
-        setStatus("Trigger: " .. matchedPhrase, COLORS.Accent2)
+local function collectAnnouncementValues(value, out, depth)
+    depth = depth or 0
+    if depth > 3 or value == nil then return end
+    local kind = typeof(value)
+    if kind == "string" or kind == "number" or kind == "boolean" then
+        out[#out + 1] = tostring(value)
         return
     end
-
-    setStatus(text, COLORS.White)
-    addCapturedMessage(text)
-    if not _codeSniper then return end
-    if text:find("%s") then return end
-    
-    for _, word in ipairs(aceTokenize(text)) do
-        aceCollectBuffer[#aceCollectBuffer + 1] = word
+    if type(value) == "table" then
+        for k, v in pairs(value) do
+            if type(k) == "string" and (k:lower():find("text", 1, true)
+                or k:lower():find("message", 1, true)
+                or k:lower():find("content", 1, true)
+                or k:lower():find("title", 1, true)) then
+                collectAnnouncementValues(v, out, depth + 1)
+            elseif type(k) == "number" then
+                collectAnnouncementValues(v, out, depth + 1)
+            end
+        end
     end
-    
-    local parts = {}
-    for index = 1, math.min(#aceCollectBuffer, ACE_WORD_COUNT) do
-        parts[index] = aceCollectBuffer[index]
-    end
-    if #aceCollectBuffer < ACE_WORD_COUNT then return end
-    aceCollectBuffer = {}
-    
-    local captured = table.concat(parts)
-    if captured == "" or _seen[captured] then return end
-    _seen[captured] = true
-    task.delay(1.25, function() _seen[captured] = nil end)
-    appendToBox(captured)
 end
 
-local aceNotifyRemote = resolveNotifyRemote()
-if aceNotifyRemote then
-    if getgenv then
-        local previous = getgenv().ACECodeSniperNotifyConnection
-        if previous then pcall(function() previous:Disconnect() end) end
+local aceCollectBuffer = aceCollectBuffer or {}
+local function onAceAnnouncement(...)
+    local values = {}
+    for i = 1, select("#", ...) do
+        collectAnnouncementValues(select(i, ...), values)
     end
-    aceListenConnection = aceNotifyRemote.OnClientEvent:Connect(function(...)
-        if not _enabled then return end
-        pcall(onAceAnnouncement, ...)
-    end)
-    if getgenv then getgenv().ACECodeSniperNotifyConnection = aceListenConnection end
+    if #values == 0 then return end
+
+    for _, rawValue in ipairs(values) do
+        local text = aceStripRich(tostring(rawValue or ""))
+        text = text:match("^%s*(.-)%s*$") or ""
+        if text ~= "" then
+            local matchedTrigger, matchedPhrase = hasTriggerPhrase(text)
+            if triggerMode and not triggerArmed and matchedTrigger then
+                armCodeSniper(matchedPhrase)
+                -- Do not feed the trigger sentence itself into the code collector.
+            else
+                setStatus(text, COLORS.White)
+                addCapturedMessage(text)
+                if _codeSniper then
+                    local words = {}
+                    for word in text:gmatch("[%w_]+") do
+                        words[#words + 1] = word
+                    end
+
+                    -- A notification containing a complete code on one line is
+                    -- accepted. Multi-word announcements are still ignored.
+                    if #words == 1 and not text:find("%s") then
+                        local captured = words[1]
+                        if captured ~= "" and not _seen[captured] then
+                            _seen[captured] = true
+                            task.delay(1.25, function() _seen[captured] = nil end)
+                            appendToBox(captured)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function connectNotifyRemotes()
+    local remotes = resolveNotifyRemotes()
+    if #remotes == 0 then return 0 end
+    local connections = {}
+    for _, remote in ipairs(remotes) do
+        local connection = remote.OnClientEvent:Connect(function(...)
+            if not _enabled then return end
+            pcall(onAceAnnouncement, ...)
+        end)
+        connections[#connections + 1] = connection
+    end
+    aceListenConnection = {
+        Disconnect = function(self)
+            for _, c in ipairs(connections) do pcall(function() c:Disconnect() end) end
+        end
+    }
+    return #remotes
+end
+
+local connectedRemoteCount = connectNotifyRemotes()
+if connectedRemoteCount > 0 then
+    setStatus("Trigger listener online (" .. tostring(connectedRemoteCount) .. ")", COLORS.Green)
+else
+    setStatus("Trigger listener not found", COLORS.Red)
+    novaNotify("TRIGGER LISTENER", "notification remote not found", COLORS.Red)
 end
 
 if getgenv then
