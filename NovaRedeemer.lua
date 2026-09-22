@@ -16,11 +16,12 @@ local savedConfig = {
     codeSniper = false,
     autoSubmit = true,
     submitAfter = 3,
+    triggerMode = true,
 }
 
 local triggerMode = true
 local triggerArmed = false
-local triggerPhrases = {"use code", "the code is", "use this code", "code is", "redeem code"}
+local triggerPhrases = {"use code", "the code is"}
 local _codeSniper = false
 local _retypeInvalid = false
 pcall(function()
@@ -31,6 +32,7 @@ pcall(function()
             if type(decoded.codeSniper) == "boolean" then savedConfig.codeSniper = decoded.codeSniper end
             if type(decoded.autoSubmit) == "boolean" then savedConfig.autoSubmit = decoded.autoSubmit end
             if type(decoded.submitAfter) == "number" then savedConfig.submitAfter = math.max(1, math.floor(decoded.submitAfter)) end
+            if type(decoded.triggerMode) == "boolean" then savedConfig.triggerMode = decoded.triggerMode end
         end
     end
 end)
@@ -42,9 +44,12 @@ local function saveConfig()
             codeSniper = savedConfig.codeSniper,
             autoSubmit = savedConfig.autoSubmit,
             submitAfter = savedConfig.submitAfter,
+            triggerMode = savedConfig.triggerMode,
         }))
     end)
 end
+
+triggerMode = savedConfig.triggerMode
 
 -- STATE VARIABLES --
 local _enabled              = savedConfig.codeSniper
@@ -847,12 +852,59 @@ local function toggleAutoWrite()
 end
 AutoWriteButton.Activated:Connect(toggleAutoWrite)
 
+-- TRIGGER MODE TOGGLE
+local TriggerCard = makeSection(58)
+TriggerCard.LayoutOrder = 3
+makeLabel(TriggerCard, "Title", "TRIGGER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
+makeLabel(TriggerCard, "Hint", "wait for USE CODE / THE CODE IS", UDim2.new(1, -110, 0, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
+
+local TriggerButton = Instance.new("TextButton")
+TriggerButton.Name = "EnableTrigger"
+TriggerButton.Size = UDim2.fromOffset(82, 30)
+TriggerButton.Position = UDim2.new(1, -94, 0.5, -15)
+TriggerButton.BackgroundColor3 = COLORS.Control
+TriggerButton.BorderSizePixel = 0
+TriggerButton.AutoButtonColor = false
+TriggerButton.TextSize = 8
+TriggerButton.Font = Enum.Font.GothamBold
+TriggerButton.TextColor3 = COLORS.Dim
+TriggerButton.ZIndex = 20
+TriggerButton.Parent = TriggerCard
+addCorner(TriggerButton, 10)
+local TriggerStroke = addStroke(TriggerButton, COLORS.Border, 1, 0.05)
+
+local function refreshTriggerToggle()
+    TriggerButton.Text = triggerMode and "ENABLED" or "OFF"
+    TriggerButton.BackgroundColor3 = triggerMode and COLORS.Accent or COLORS.Control
+    TriggerButton.TextColor3 = triggerMode and COLORS.White or COLORS.Dim
+    TriggerStroke.Color = triggerMode and COLORS.Accent2 or COLORS.Border
+end
+refreshTriggerToggle()
+
+TriggerButton.Activated:Connect(function()
+    triggerMode = not triggerMode
+    savedConfig.triggerMode = triggerMode
+    triggerArmed = false
+    _codeSniper = not triggerMode and _enabled
+    clearAceCapture()
+    refreshTriggerToggle()
+    saveConfig()
+    _lastStatusMsg = nil
+    if triggerMode then
+        setStatus("Trigger ON - waiting for USE CODE / THE CODE IS", COLORS.Green)
+        novaNotify("TRIGGER ON", "waiting for USE CODE / THE CODE IS", COLORS.Green)
+    else
+        setStatus("Trigger OFF - scanner does not wait for trigger", COLORS.Amber)
+        novaNotify("TRIGGER OFF", "trigger gate disabled", COLORS.Amber)
+    end
+end)
+
 -- MESSAGE TRACKER
 local _messageHistory = {}
 local _currentBatch = {}
 
 local MessageCard = makeSection(126)
-MessageCard.LayoutOrder = 3
+MessageCard.LayoutOrder = 4
 
 local MsgHeader = Instance.new("Frame")
 MsgHeader.Size = UDim2.new(1, -20, 0, 26)
@@ -951,7 +1003,7 @@ end)
 
 local function makeStateRow(title, hint, enabled, key, onToggle)
     local row = makeSection(58)
-    row.LayoutOrder = (key == "Auto submit") and 5 or 6
+    row.LayoutOrder = (key == "Auto submit") and 6 or 7
     makeLabel(row, "Title", title, UDim2.new(1, -78, 0, 18), UDim2.fromOffset(12, 7), 10, COLORS.White, Enum.Font.GothamMedium)
     makeLabel(row, "Hint", hint, UDim2.new(1, -78, 0, 15), UDim2.fromOffset(12, 29), 7, COLORS.Dim, Enum.Font.GothamMedium)
     local b = makeButton(row, "State", enabled and "ON" or "OFF", UDim2.fromOffset(48, 25), UDim2.new(1, -60, 0.5, -12), 8)
@@ -986,7 +1038,7 @@ makeStateRow("Retype invalid", "restore rejected text", _retypeInvalid, "Retype 
 end)
 
 local Delay = makeSection(62)
-Delay.LayoutOrder = 4
+Delay.LayoutOrder = 5
 makeLabel(Delay, "Title", "SUBMIT AFTER", UDim2.fromOffset(130, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(Delay, "Hint", "captured parts", UDim2.fromOffset(120, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1023,7 +1075,7 @@ Plus.Activated:Connect(function()
 end)
 
 local ScaleCard = makeSection(62)
-ScaleCard.LayoutOrder = 7
+ScaleCard.LayoutOrder = 8
 makeLabel(ScaleCard, "Title", "UI SCALE", UDim2.fromOffset(90, 18), UDim2.fromOffset(12, 8), 9, COLORS.Dim, Enum.Font.GothamBold)
 makeLabel(ScaleCard, "Hint", "0.5x  →  1x", UDim2.fromOffset(90, 15), UDim2.fromOffset(12, 30), 7, COLORS.Dim, Enum.Font.GothamMedium)
 
@@ -1400,63 +1452,37 @@ playerGui.DescendantAdded:Connect(function(obj)
 end)
 
 -- ANNOUNCEMENT / TRIGGER LISTENER -----------------------------------------
-local function resolveNotifyRemotes()
-    local remotes = {}
-    local seenRemotes = {}
-    local function addRemote(remote)
-        if remote and remote:IsA("RemoteEvent") and not seenRemotes[remote] then
-            seenRemotes[remote] = true
-            remotes[#remotes + 1] = remote
-        end
+local function resolveNotifyRemote()
+    if _G.PhiNotifyRemote and _G.PhiNotifyRemote:IsA("RemoteEvent") then
+        return _G.PhiNotifyRemote
     end
-
-    if _G.PhiNotifyRemote then addRemote(_G.PhiNotifyRemote) end
 
     local packages = ReplicatedStorage:FindFirstChild("Packages")
     local net = packages and packages:FindFirstChild("Net")
     local getinfo = debug and (debug.getinfo or debug.info)
+    if not (net and getconns and getinfo) then return nil end
 
-    -- First choice: the same RemoteEvent used by the game's notification controller.
-    if net and getconns and getinfo then
-        for _, d in ipairs(net:GetDescendants()) do
-            if d:IsA("RemoteEvent") then
-                local ok, cs = pcall(getconns, d.OnClientEvent)
-                if ok and type(cs) == "table" then
-                    for _, c in ipairs(cs) do
-                        local fn = nil
-                        pcall(function() fn = c.Function end)
-                        if type(fn) == "function" then
-                            local infoOk, info = pcall(getinfo, fn)
-                            local src = infoOk and tostring(info.short_src or info.source or "") or ""
-                            if src:lower():find("notificationcontroller", 1, true)
-                                or src:lower():find("notification", 1, true) then
-                                addRemote(d)
-                                break
-                            end
+    -- IMPORTANT: only use the RemoteEvent actually consumed by
+    -- NotificationController. Do not subscribe to generic message/sound remotes.
+    for _, d in ipairs(net:GetDescendants()) do
+        if d:IsA("RemoteEvent") then
+            local ok, cs = pcall(getconns, d.OnClientEvent)
+            if ok and type(cs) == "table" then
+                for _, c in ipairs(cs) do
+                    local fn
+                    pcall(function() fn = c.Function end)
+                    if type(fn) == "function" then
+                        local infoOk, info = pcall(getinfo, fn)
+                        local src = infoOk and tostring(info.short_src or info.source or "") or ""
+                        if src:lower():find("notificationcontroller", 1, true) then
+                            return d
                         end
                     end
                 end
             end
         end
     end
-
-    -- Fallback: notification/announcement named remotes. This fixes the case
-    -- where the controller connection cannot be inspected by the executor.
-    if net then
-        for _, d in ipairs(net:GetDescendants()) do
-            if d:IsA("RemoteEvent") then
-                local n = d.Name:lower()
-                if n:find("notif", 1, true)
-                    or n:find("announce", 1, true)
-                    or n:find("message", 1, true)
-                    or n:find("toast", 1, true) then
-                    addRemote(d)
-                end
-            end
-        end
-    end
-
-    return remotes
+    return nil
 end
 
 local function aceStripRich(text)
@@ -1474,7 +1500,8 @@ end
 local function hasTriggerPhrase(value)
     local normalized = normalizeTriggerText(value)
     for _, phrase in ipairs(triggerPhrases) do
-        if normalized:find(normalizeTriggerText(phrase), 1, true) then
+        local normalizedPhrase = normalizeTriggerText(phrase)
+        if normalized:find(normalizedPhrase, 1, true) then
             return true, phrase
         end
     end
@@ -1488,7 +1515,6 @@ local function armCodeSniper(phrase)
     _capturedParts = {}
     _lastStatusMsg = nil
     setStatus("Trigger detected: " .. tostring(phrase or "use code"), COLORS.Green)
-    -- The trigger gets its own notification, just like a successful redeem.
     novaNotify("TRIGGER DETECTED!", tostring(phrase or "use code"), COLORS.Green)
 end
 
@@ -1501,94 +1527,92 @@ disarmCodeSniper = function()
     novaNotify("SNIPE OFF", "waiting for next trigger", COLORS.Amber)
 end
 
-local function collectAnnouncementValues(value, out, depth)
+-- The notification remote can send several arguments. Only strings are
+-- candidates; numeric/sound/UI arguments such as 5 or Sounds.Sfx.Blop are ignored.
+local function collectNotificationStrings(value, out, depth)
     depth = depth or 0
-    if depth > 3 or value == nil then return end
-    local kind = typeof(value)
-    if kind == "string" or kind == "number" or kind == "boolean" then
-        out[#out + 1] = tostring(value)
+    if depth > 2 or value == nil then return end
+    if type(value) == "string" then
+        out[#out + 1] = value
         return
     end
-    if type(value) == "table" then
-        for k, v in pairs(value) do
-            if type(k) == "string" and (k:lower():find("text", 1, true)
-                or k:lower():find("message", 1, true)
-                or k:lower():find("content", 1, true)
-                or k:lower():find("title", 1, true)) then
-                collectAnnouncementValues(v, out, depth + 1)
-            elseif type(k) == "number" then
-                collectAnnouncementValues(v, out, depth + 1)
-            end
+    if type(value) ~= "table" then return end
+
+    local preferred = {"text", "message", "content", "body", "description"}
+    for _, key in ipairs(preferred) do
+        local v = value[key]
+        if type(v) == "string" then
+            out[#out + 1] = v
+        elseif type(v) == "table" then
+            collectNotificationStrings(v, out, depth + 1)
         end
     end
 end
 
-local aceCollectBuffer = aceCollectBuffer or {}
+local function isUsableCodePart(text)
+    text = aceStripRich(tostring(text or ""))
+    text = text:match("^%s*(.-)%s*$") or ""
+    if text == "" or #text > 80 then return false end
+    if text:find("%s") then return false end
+    if text:find("[%.:/\\]") then return false end
+    if text:lower() == "top" or text:lower() == "bottom" then return false end
+    return text:match("^[%w_%-]+$") ~= nil
+end
+
+local aceCollectBuffer = {}
 local function onAceAnnouncement(...)
     local values = {}
     for i = 1, select("#", ...) do
-        collectAnnouncementValues(select(i, ...), values)
+        collectNotificationStrings(select(i, ...), values)
     end
     if #values == 0 then return end
+
+    -- First pass: trigger detection. Punctuation is normalized, so these all work:
+    -- "USE CODE", "USE CODE...", "THE CODE IS", "THE CODE IS..."
+    if triggerMode and not triggerArmed then
+        for _, rawValue in ipairs(values) do
+            local matchedTrigger, matchedPhrase = hasTriggerPhrase(rawValue)
+            if matchedTrigger then
+                armCodeSniper(matchedPhrase)
+                return
+            end
+        end
+        return
+    end
+
+    -- Trigger disabled: scanner is allowed to collect code parts immediately.
+    -- Trigger enabled: only collect after a trigger was detected.
+    if triggerMode and not triggerArmed then return end
 
     for _, rawValue in ipairs(values) do
         local text = aceStripRich(tostring(rawValue or ""))
         text = text:match("^%s*(.-)%s*$") or ""
-        if text ~= "" then
-            local matchedTrigger, matchedPhrase = hasTriggerPhrase(text)
-            if triggerMode and not triggerArmed and matchedTrigger then
-                armCodeSniper(matchedPhrase)
-                -- Do not feed the trigger sentence itself into the code collector.
-            else
-                setStatus(text, COLORS.White)
-                addCapturedMessage(text)
-                if _codeSniper then
-                    local words = {}
-                    for word in text:gmatch("[%w_]+") do
-                        words[#words + 1] = word
-                    end
-
-                    -- A notification containing a complete code on one line is
-                    -- accepted. Multi-word announcements are still ignored.
-                    if #words == 1 and not text:find("%s") then
-                        local captured = words[1]
-                        if captured ~= "" and not _seen[captured] then
-                            _seen[captured] = true
-                            task.delay(1.25, function() _seen[captured] = nil end)
-                            appendToBox(captured)
-                        end
-                    end
-                end
+        if isUsableCodePart(text) then
+            if not _seen[text] then
+                _seen[text] = true
+                task.delay(1.25, function() _seen[text] = nil end)
+                appendToBox(text)
             end
+            return
         end
     end
 end
 
-local function connectNotifyRemotes()
-    local remotes = resolveNotifyRemotes()
-    if #remotes == 0 then return 0 end
-    local connections = {}
-    for _, remote in ipairs(remotes) do
-        local connection = remote.OnClientEvent:Connect(function(...)
-            if not _enabled then return end
-            pcall(onAceAnnouncement, ...)
-        end)
-        connections[#connections + 1] = connection
+local aceNotifyRemote = resolveNotifyRemote()
+if aceNotifyRemote then
+    if getgenv then
+        local previous = getgenv().ACECodeSniperNotifyConnection
+        if previous then pcall(function() previous:Disconnect() end) end
     end
-    aceListenConnection = {
-        Disconnect = function(self)
-            for _, c in ipairs(connections) do pcall(function() c:Disconnect() end) end
-        end
-    }
-    return #remotes
-end
-
-local connectedRemoteCount = connectNotifyRemotes()
-if connectedRemoteCount > 0 then
-    setStatus("Trigger listener online (" .. tostring(connectedRemoteCount) .. ")", COLORS.Green)
+    aceListenConnection = aceNotifyRemote.OnClientEvent:Connect(function(...)
+        if not _enabled then return end
+        pcall(onAceAnnouncement, ...)
+    end)
+    if getgenv then getgenv().ACECodeSniperNotifyConnection = aceListenConnection end
+    setStatus("Trigger listener online", COLORS.Green)
 else
     setStatus("Trigger listener not found", COLORS.Red)
-    novaNotify("TRIGGER LISTENER", "notification remote not found", COLORS.Red)
+    novaNotify("TRIGGER LISTENER", "NotificationController remote not found", COLORS.Red)
 end
 
 if getgenv then
